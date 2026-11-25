@@ -1,0 +1,17 @@
+# Corvane Mutual product recipe, rules only: the pinned standard with the optional AI stages switched off.
+recipe: corvane-mutual-rules
+version: 1
+extends: msock/standard-recipe 2026.10.47
+
+changes:
+  - stage: 04 Deterministic Parse
+    set:
+      params: { project: corvane-mutual, database: postgres/claims, default_schema: public }
+  - stage: 05 Agent reading
+    switch_off: true
+  - stage: 07 Cross Source discovery
+    switch_off: true
+  - stage: 08 Deep Inference
+    switch_off: true
+
+lanes: { at_once: 5, per_lane_jobs: 900, priority: [claims] }

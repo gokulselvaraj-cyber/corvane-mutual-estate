@@ -1,0 +1,24 @@
+# Sitting 3 variant of recipe-full-msockdev.yaml (2026-11-18): identical except the recipe id and checks.mode full.
+# Corvane Mutual product recipe, "nothing optional": msock-dev standard 2026.11.16 (moved from 2026.10.60 on 2026-11-24) with every stage on (05, 07, 08 kept
+# on), stage 07 widened from the D01/D04 allowlist to all 18 dimensions that have a detector, and the completeness
+# critic no longer held. mandatory_stages itself belongs to the standard and cannot be changed by a product (R-06).
+recipe: corvane-mutual-full-checks
+version: 1
+extends: msock/standard-recipe 2026.11.16
+
+changes:
+  - stage: 04 Deterministic Parse
+    set:
+      params: { project: corvane-mutual, database: postgres/claims, default_schema: public }
+  - stage: 07 Cross Source discovery
+    set:
+      synthesis_scope.kinds: [D01, D02, D03, D04, D05, D06, D07, D08, D09, D10, D11, D12, D13, D15, D16, D17, D18, D19]
+      synthesis_scope.critic: run
+
+lanes: { at_once: 5, per_lane_jobs: 900, priority: [claims] }
+
+# B7 (2026-11-18, ST-C6): the same recipe with the after-run check in full mode, for sitting 3 only (run-plan-full.md).
+# msock-dev resolves it and accepts full at run end (wiring.py AFTER_RUN_MODES = rule_only, full; refresh is refused
+# with check_mode_unavailable). Expected: the CheckResult says mode full and fails with "usefulness: not measured"
+# (no usefulness measure is wired), so the harness stops before publish ("the rule-only check failed").
+checks: { mode: full }

@@ -1,0 +1,14 @@
+# Corvane Mutual, local run 1: rule readers only (stages 05, 07, 08 off). Shows 00-04, 06, 09, 10, A, T, P end to end.
+project: corvane-mutual
+application: claims
+owner_team: claims-platform
+recipe: recipe-rules.yaml
+unattended: true
+review_mode: confidence
+gates: [publish]
+question: Who calls the claims-service approve endpoint?
+sources:
+  - source_id: corvane-estate
+    kind: file-drop
+    location: ../estate-v2/corvane-estate
+    code_page: utf-8

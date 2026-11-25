@@ -1,0 +1,11 @@
+# Corvane Mutual product recipe, full: the pinned standard as it is, AI stages on (answers replayed or missing locally).
+recipe: corvane-mutual-full
+version: 1
+extends: msock/standard-recipe 2026.10.47
+
+changes:
+  - stage: 04 Deterministic Parse
+    set:
+      params: { project: corvane-mutual, database: postgres/claims, default_schema: public }
+
+lanes: { at_once: 5, per_lane_jobs: 900, priority: [claims] }

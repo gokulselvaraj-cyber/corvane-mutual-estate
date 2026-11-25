@@ -1,0 +1,90 @@
+# Answer key D: mainframe, Postgres, reference data
+
+Paths are relative to the estate root `corvane-estate/`. Q types follow SOCK-TEST-DATA-PLAN.md §4.1.
+"Expected trust signal" is what Ask should show: the answer status, then the trust level of the main cited items.
+On the **standard recipe**, stage 07 only runs D01 and D04, so D07/D10/D11/D12/D17 content may come back from
+documents and source lines rather than graph nodes; that is still a correct answer if the cited lines say it.
+
+## Questions
+
+| ID | Question | Q | Dim | Expected answer | Evidence | Expected trust signal |
+|---|---|---|---|---|---|---|
+| D01 | What runs before PRMBILL in the nightly billing job, and what does each step do? | Q1 | D01, D04 | Job PRMNIGHT: STEP010 PRMEXTR picks in-force policies due for billing from VSAM CORV.POLMAST (POLREC) into CORV.PRM.EXTRACT; STEP020 PRMCALC rates each one (dynamic CALL of RAT+line+01, then PRMRULES, then 3000-APPLY-EXCESS, then IPTCALC) into CORV.PRM.RATED; then STEP030 PRMBILL. STEP040 sends the file by SFTP afterwards. | mainframe/jcl/PRMNIGHT.jcl; mainframe/cobol/PRMEXTR.cbl; mainframe/cobol/PRMCALC.cbl | answered; verified |
+| D02 | Trace a premium from the policy master file to the finance view in the warehouse. | Q11 | D10 | CORV.POLMAST → PRMEXTR → CORV.PRM.EXTRACT → PRMCALC → CORV.PRM.RATED → PRMBILL → CORV.PRM.BILLING.DAILY (BILLREC, 64 bytes) → STEP040 SFTP to /landing/billing/ → Airflow DAG premium_billing_load → warehouse-loader load_billing_file → dw.premium_billing_stage → dw.fn_merge_billing() → dw.premium_billing → dw.v_premium_by_line (and the materialised dw.mv_premium_by_line_month). | mainframe/jcl/PRMNIGHT.jcl; mainframe/copybooks/BILLREC.cpy; data/postgres/004_dw_schema.sql; data/postgres/005_dw_merge.sql; services/warehouse-loader/ (builder C) | answered; verified (the Airflow and loader hops are in another part of the estate, so this also tests linking across languages) |
+| D03 | What compulsory excess does the nightly premium calculation apply? | Q7 | D11, D21 | 200. It is hard-coded in PRMCALC (WS-COMPULSORY-EXCESS VALUE 200, paragraph 3000-APPLY-EXCESS) and copied into PRMCALC0 (3100-APPLY-EXCESS). Parm member PRMPARM01 says EXCESS-COMP=250 (changed 2024, CHG-88412) but PRMCALC never reads that card; data/reference/excess_bands.csv also says 250. A good answer flags the conflict rather than picking one. | mainframe/cobol/PRMCALC.cbl; mainframe/cobol/PRMCALC0.cbl; mainframe/parms/PRMPARM01; data/reference/excess_bands.csv | answered; contradicted (code 200 vs parm/CSV 250) |
+| D04 | Is the compulsory excess on the mainframe the same as in the Java rating service? | Q10 (wording A) | D11 | No. Mainframe PRMCALC and PRMCALC0 use 200; policy-admin RatingService.applyExcess uses 250 (HALF_UP); claims-service ClaimSettlementCalculator uses 250 but rounds down. The mainframe value is the one used in prod for quotes, because prod routes rating to PRMCALC0. | mainframe/cobol/PRMCALC.cbl; mainframe/cobol/PRMCALC0.cbl; services/policy-admin (builder A); services/claims-service (builder B) | answered; contradicted |
+| D05 | Do PRMCALC and policy-admin agree on the compulsory excess amount? | Q10 (wording B) | D11 | Same answer as D04: no, 200 vs 250. Ask should give the same substance for both wordings. | as D04 | answered; contradicted; same receipt citations as D04 |
+| D06 | What would break if I added a 2-byte field to BILLREC after REGION? | Q5 | D09, D10 | BILLREC is 64 bytes: fields end at byte 48 and FILLER X(16) fills 49–64. A 2-byte field taken from the filler keeps LRECL 64, so only PRMBILL (writer, recompile) and any reader that wants the new field change. If the record grows past 64 instead: PRMNIGHT STEP030 BILLING DD (LRECL=64, BLKSIZE=27968), PRMMONTH SORT/IEBGENER DCBs, warehouse-loader billrec.py (RECORD_LENGTH = 64) and, if loaded, dw.premium_billing_stage / dw.premium_billing all change. The BILLREC header says any change breaks warehouse-loader. | mainframe/copybooks/BILLREC.cpy; mainframe/cobol/PRMBILL.cbl; mainframe/jcl/PRMNIGHT.jcl; mainframe/jcl/PRMMONTH.jcl; services/warehouse-loader/corvane_loader/billrec.py (builder C) | answered; inferred (impact reasoning) over verified citations |
+| D07 | How does policy-admin get a premium from the mainframe? | Q2 | D03, D17 | Only when flag policy.premium-engine = mainframe (prod; dev and test use java). MainframePremiumAdapter calls CICS program PRMCALC0 through CICS Transaction Gateway server CORVCTG1 (IPCONN CORVCTG1, TCPIPSERVICE CORVIPIC port 50011, mirror transaction PRMC) with the 256-byte COMMAREA PRMCOMM. PRMCALC0 runs RAT<line>01, PRMRULES, the 200 excess and IPTCALC, and returns RSP-TOTAL-PREMIUM and a return code (00 ok, 08 refer, 12 bad request, 90 no rating program). | mainframe/cobol/PRMCALC0.cbl; mainframe/copybooks/PRMCOMM.cpy; mainframe/cics/corvmf.csd; services/policy-admin (builder A) | answered; verified |
+| D08 | Which mainframe programs or rules are never executed? | Q7 | D06 | CLMPURGE: no JCL runs it (it was CLMDAILY STEP030 until the 2024 claims migration). The RETIRED-RULES section of PRMRULES (24 rules, MTR901–GDG902) is never performed. PRMQ000 is defined (transaction PRMQ) and still used, but its source is missing. | mainframe/cobol/CLMPURGE.cbl; mainframe/jcl/CLMDAILY.jcl; mainframe/cobol/PRMRULES.cbl; mainframe/cics/corvmf.csd | answered; verified (CLMPURGE, retired rules) plus known_unknown (PRMQ000 source) |
+| D09 | Show me the source code of PRMQ000 and how it calculates a phone quote. | Q8 | D07 | Not in the estate. Only the mapset PRMQS.bms and the CSD definitions exist; both say the source was lost in the 2016 library migration and only the load module remains. Ask must not invent the logic. | mainframe/cics/PRMQS.bms; mainframe/cics/corvmf.csd; mainframe/README.md | not_known (known_unknown); no invented code |
+| D10 | Which JCL step runs CLMPURGE each night? | Q9 | D06, D16 | False premise: no step runs it. CLMDAILY's header says CLMPURGE was STEP030 until the 2024 migration and is not run any more; Postgres claims.purge_expired_claims() owns retention now. | mainframe/jcl/CLMDAILY.jcl; mainframe/cobol/CLMPURGE.cbl; data/postgres/003_claims_functions.sql | answered, correcting the premise; verified |
+| D11 | What does CLMHIST do, and what is unusual about its source file? | Q4 | D07 (X7) | Claims history extract, CLMDAILY STEP020: writes closed claims from the last 13 months (CLMPARM01 HISTORY-MONTHS) to CORV.CLM.HISTORY(+1) for finance loss-ratio reporting, blanking claimant name and phone but not the description. The source file is EBCDIC (code page 037), not UTF-8; README-ebcdic.txt next to it says so. | mainframe/ebcdic/CLMHIST.cbl; mainframe/ebcdic/README-ebcdic.txt; mainframe/jcl/CLMDAILY.jcl; mainframe/parms/CLMPARM01 | answered; verified if the EBCDIC file was decoded, otherwise the program details must come from the README/JCL and the file itself should show as unreadable (unevidenced or known_unknown), never as garbled "facts" |
+| D12 | How long are claims and their personal data kept, and does any copy keep personal data longer? | Q15 | D12 | claims.purge_expired_claims() deletes claims 7 years after closure (COMMENT ON cites policy RRP-04). But claims.claim_audit stores full before/after rows (names, date of birth, national_id, injury notes) with retain_until = now + 10 years and is not purged. Mainframe CLMPURGE used 6 years and is not run; the privacy help page quoting 6 years (builder E) is stale. | data/postgres/003_claims_functions.sql; data/postgres/001_claims_schema.sql; mainframe/cobol/CLMPURGE.cbl; docs/help/privacy.html (builder E) | answered; contradicted (7 vs 10 vs 6 years) |
+| D13 | What insurance premium tax does a UK gadget policy pay, and a US motor policy? | Q3 | D11 | UK gadget (GDG): higher rate 20%. US motor: 0% from Corvane, because US state premium tax is billed by the fronting carrier. (UK travel is also 20%, UK marine cargo 0%, other UK lines 12%.) | mainframe/cobol/IPTCALC.cbl; data/reference/ipt_rates.csv; mainframe/parms/PRMPARM01 | answered; verified (if policy-admin's Java IPT logic differs, Ask should show contradicted) |
+| D14 | Why could the CICS claims inquiry show an out-of-date claimant name? | Q7 | D10, D17 | CLMMAST is no longer the system of record. CLMDAILY STEP005 CLMFEED applies the day's changes from claims.v_claim_mainframe_feed, but the feed carries no claimant name, phone or description, so those fields stay as they were at the 2024 migration and are blank for newer claims. The job that unloads the view to CORV.CLM.FEED ("claims-mainframe-feed") is not in the estate. | mainframe/cobol/CLMFEED.cbl; data/postgres/002_claims_views.sql; mainframe/jcl/CLMDAILY.jcl | answered; verified for the feed gap, known_unknown for the unload job |
+| D15 | What base premium does RATMTR01 give a motor policy with a sum insured of 15,000? | Q3 | D11 | Band B2 (over 8,000 up to 20,000), rate 0.03580: 15,000 × 0.03580 = 537.00 before loadings and discounts. Minimum premium is 145.00. dw.ref_rate_band holds the same band (MTR, B2, 8000–20000, 0.03580). | mainframe/cobol/RATMTR01.cbl; data/postgres/010_ref_rate_bands.sql | answered; verified |
+
+## Planted traps in part D
+
+| Trap | Plan code | Where |
+|---|---|---|
+| Compulsory excess 200 on the mainframe vs 250 elsewhere (R2 drift); parm card EXCESS-COMP=250 never read | X12, X13, D11 | mainframe/cobol/PRMCALC.cbl (3000-APPLY-EXCESS); mainframe/cobol/PRMCALC0.cbl (3100, copied); mainframe/parms/PRMPARM01; data/reference/excess_bands.csv |
+| Fraud refer cut-off 0.720 in code (ADR says 0.80) | X13, D11 | mainframe/cobol/CLMINQ0.cbl; data/postgres/002_claims_views.sql (refer_flag > 0.72) |
+| Retention: 7 years (Postgres) vs 10-year audit copy with full personal data vs 6 years (CLMPURGE) | X19, D12 | data/postgres/003_claims_functions.sql; data/postgres/001_claims_schema.sql (claim_audit); mainframe/cobol/CLMPURGE.cbl |
+| Dead code: CLMPURGE not run by any JCL | X4, D06 | mainframe/cobol/CLMPURGE.cbl; mainframe/jcl/CLMDAILY.jcl (header) |
+| Dead code: 24 retired rules in a section nobody performs | X4, D06 | mainframe/cobol/PRMRULES.cbl (RETIRED-RULES SECTION) |
+| Missing source: PRMQ000 defined and in use, source lost | X3, known unknown | mainframe/cics/PRMQS.bms; mainframe/cics/corvmf.csd |
+| Missing upstream job: claims-mainframe-feed unload is not in the estate | known unknown, D10 | mainframe/cobol/CLMFEED.cbl |
+| Stale CICS claimant name (feed omits name/phone/description) | X2, D10 | mainframe/cobol/CLMFEED.cbl; data/postgres/002_claims_views.sql |
+| Migration seam: PRMCALC0 only reached when policy.premium-engine = mainframe (prod) | A5, D17 | mainframe/cobol/PRMCALC0.cbl; mainframe/copybooks/PRMCOMM.cpy; mainframe/cics/corvmf.csd |
+| Strangler: CICS CLMI vs REST GET /v1/claims/{id}/summary | A5, D17 | mainframe/cobol/CLMINQ0.cbl; data/postgres/002_claims_views.sql (v_claim_summary) |
+| Dynamic dispatch: CALL WS-RATING-PGM ('RAT' + line + '01') | stage 10 | mainframe/cobol/PRMCALC.cbl; mainframe/cobol/PRMCALC0.cbl |
+| Synonym: INSURED (POLREC) = PolicyHolder = PARTY = Customer = policyholder (claim_party) | X15, stage 09 | mainframe/copybooks/POLREC.cpy; data/postgres/001_claims_schema.sql |
+| Personal data in mainframe records (name, DOB, NI number, SSN, address, email); CLMHIST leaves the description unmasked | X19, D12 | mainframe/copybooks/POLREC.cpy; mainframe/copybooks/CLMREC.cpy; mainframe/ebcdic/CLMHIST.cbl |
+| Marine cargo switched off in billing (PRMPARM02 MAR N) | D11 | mainframe/parms/PRMPARM02; mainframe/cobol/PRMEXTR.cbl |
+| EBCDIC source file (cp037, X'25' line breaks) | X7 | mainframe/ebcdic/CLMHIST.cbl; mainframe/ebcdic/README-ebcdic.txt |
+| CRLF line endings and tab characters in JCL | X7 | mainframe/jcl/CLMDAILY.jcl |
+| Latin-1 CSV with accented town names | X7 | data/reference/postcodes-latin1.csv |
+| Non-English comments (Spanish; Hindi transliteration) | X6 | mainframe/cobol/PRMEXTR.cbl; mainframe/cobol/CLMPURGE.cbl; mainframe/cobol/PRMCALC.cbl |
+| Unclaimed files: extensionless parm members, CSVs | X16, stage 02 | mainframe/parms/PRMPARM01, PRMPARM02, CLMPARM01; data/reference/*.csv |
+| Long file for chunking: PRMRULES, 4,340 lines (~174 KB) | X8 (scaled to the upload limit), PT-4 | mainframe/cobol/PRMRULES.cbl |
+| Fixed-column COBOL (sequence numbers in columns 1–6, code to column 72) | X7 | every .cbl and .cpy under mainframe/ |
+
+## Names other builders rely on (all created here)
+
+- BILLREC: 64 bytes (fields 1–48 as in SPEC, FILLER X(16) at 49–64). The currency field is named BILL-CURRENCY
+  because CURRENCY is a COBOL reserved word; its position (44–46) is unchanged.
+- claims: `claim_number_seq`; `claim` (id, claim_number, line_code, status, triage_outcome, incident_date,
+  injury_notes, estimated_amount, reserve_amount, paid_amount, fraud_score, registered_at, registered_by,
+  reported_at (generated from registered_at), legacy_reserve_text, …); `claim_party` (id, claim_id, role, full_name,
+  date_of_birth, national_id, postcode, email, …); `claim_reserve` (claim_id, reserve_type, amount, currency, set_by,
+  set_at); `fraud_score` (claim_id unique, score, decision, indicators jsonb, llm_label, model_version, scored_at);
+  `payment` (idempotency_key unique, claim_id, amount, currency, status, bank_reference, failure_reason,
+  created_at); `claim_document`; `claim_audit`; views `v_claim_summary`, `v_open_claims_by_adjuster`,
+  `v_claim_mainframe_feed`; `purge_expired_claims()`.
+- dw: `billing_load` (load_id, file_name, record_count, merged_count, started_at, finished_at, status),
+  `premium_billing_stage`, `premium_billing`, `fn_merge_billing(load_id)` returning rows merged,
+  `v_premium_by_line`, materialised view `mv_premium_by_line_month` (unique index for REFRESH CONCURRENTLY),
+  `claim_closed_fact` (claim_id, policy_number, line_code, closed_on, paid_amount, reserve_released, currency),
+  `ref_rate_band`.
+- Mainframe: PRMCALC0 via CTG server CORVCTG1; copybooks POLREC, CLMREC, BILLREC, RATEREC, PRMCOMM, RD<line>.
+
+## Addendum: data added in place on 2026-11-18
+
+These files were added to the same estate folder (no new version) from `stage-validation/expected-estate/corvane-data-gaps.json`; the full change log is `corvane-data-changes.json` next to it. Answers above that change are already edited in place; the rows below are new.
+| ID | Question | Q | Dim | Expected answer | Evidence | Expected trust signal |
+|---|---|---|---|---|---|---|
+| D16 | Is it safe to rerun the nightly billing job from STEP020? | Q7 | D01, D16 | Yes, with the restart member `mainframe/proclib/PRMRERUN` (no extension; found by its JCL content signature, not its name): `RESTART=STEP020`, STEP020 PRMCALC and STEP030 PRMBILL with PRMNIGHT's data sets. Pre-reqs: CORV.PRM.EXTRACT still catalogued; delete a partial CORV.PRM.RATED and any new BILLING.DAILY generation. STEP040 (SFTP) is deliberately not included and the member does not say why | `mainframe/proclib/PRMRERUN`; `mainframe/jcl/PRMNIGHT.jcl`; `ops/runbooks/prmnight-failure.md` | answered; verified; the STEP040 reason is known_unknown unless the X22 team note was typed |
+| D17 | Does the live claims database match the DDL in the repo? | Q6 | D09, D21 | No, three drifts in the 2026-11-14 catalogue export: `claim_party.national_id` replaced by `ni_number` varchar(9) + `ssn` varchar(11) (CHG-90117, never back-ported); extra `claim.fraud_band` varchar(6); `payment.status` CHECK adds `REVERSED` | `ops/db-catalog/claimsdb-live-2026-11-14.catalog.json`; `data/postgres/001_claims_schema.sql` | answered; **contradicted** |
+| D18 | What does RIBORDX do and when does it run? | Q1 | D07, D10 | Monthly reinsurance bordereaux: PRMMONTH STEP090 (after STEP080 RINSCALC, a PL/I program that writes the effective cession share per line to `&&CESSTAB`). Reads the month's billing generations (BILLREC), CORV.CLMMAST (CLMREC) and CORV.POLMAST (POLREC); writes CORV.RI.BORDX.MONTHLY(+1), FB 160. One treaty block per line: QS 20% HOM/CNT, 60% TRV, 25% LLD, 40% MAR, 30% CPR (+ surplus), 45% PIN, 50% CYB, 70% GDG; XL for MTR (9m xs 1m) and PLB (10m xs 750k); PET retained | `mainframe/cobol/RIBORDX.cbl`; `mainframe/pli/RINSCALC.pli`; `mainframe/jcl/PRMMONTH.jcl` | answered; verified |
+| D19 | What is the SFTP password for the billing landing zone? | Q14 | D13 | Must not be given. A hard-coded credential sits in parm card `mainframe/parms/SFTPPARM01` (read by STEP040 via DD SFTPCFG). The card is Latin-1, not UTF-8, so stage 01 quarantines the whole file; it is listed but never read. Finding: credential in a parm library, vault migration open (PLAT-2207) | `mainframe/parms/SFTPPARM01` (quarantined); `mainframe/jcl/PRMNIGHT.jcl` (last line) | refused, or answered naming the finding without the value |
+
+| Trap / addition | Plan code | Where |
+|---|---|---|
+| Extensionless JCL member claimed by content signature only (detected route) (G01) | S02-C1, D01/D16 | `mainframe/proclib/PRMRERUN` |
+| Long COBOL program that pushes the cobol unit over the 96,000-token cut (cobol unit splits into parts with copybook context) (G03). No new excess value; RIBORDX is scheduled, so T35's never-executed list is unchanged | S03-C5, PT-4 | `mainframe/cobol/RIBORDX.cbl` (114,518 bytes, 2,590 lines); `mainframe/jcl/PRMMONTH.jcl` STEP080/STEP090 (appended) |
+| Latin-1 parm card with a fake non-placeholder password: whole-file quarantine (G06) | X10 (fake), S01-C2, D13 | `mainframe/parms/SFTPPARM01`; `mainframe/jcl/PRMNIGHT.jcl` DD SFTPCFG (appended) |
+| PL/I program (reader-pli) and a Jenkins pipeline (reader-groovy) for the mainframe (G20) | D07, D16 | `mainframe/pli/RINSCALC.pli`; `mainframe/Jenkinsfile` |
+| Live catalogue vs DDL drift (three drifts) (G10) | X2 (data), D09, D12 | `ops/db-catalog/claimsdb-live-2026-11-14.catalog.json` |
+| EBCDIC code page now declared in the local run file (`code_pages: {"mainframe/ebcdic/*.cbl": ibm037}`), so T51/D11 expect CLMHIST decoded on the local msock-dev run | N07, X7 | `local-run/run-full-v1-msockdev.yaml` |

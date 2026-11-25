@@ -1,0 +1,2167 @@
+"""Builder D, hand-written core: mainframe/, data/postgres/, data/reference/ for the Corvane Mutual estate v2.
+
+Run: python3 -I generator/mainframe_core.py <estate_root>
+COBOL bodies below start at column 7: the first character of each line is the indicator (space or *),
+Area A starts at the second character, Area B at the sixth. The writer adds sequence numbers in columns 1-6
+and refuses any line that would pass column 72.
+"""
+import os
+import sys
+
+ROOT = sys.argv[1]
+ERRORS = []
+
+
+def write(rel, text, encoding="utf-8", newline="\n"):
+    path = os.path.join(ROOT, rel)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    data = text.replace("\n", newline)
+    with open(path, "w", encoding=encoding, newline="") as f:
+        f.write(data)
+
+
+def cobol(name, body):
+    out = []
+    for i, line in enumerate(body.strip("\n").split("\n"), 1):
+        line = line.rstrip() or " "
+        if len(line) > 66:
+            ERRORS.append(f"{name} line {i}: {line!r}")
+        out.append(f"{i * 100:06d}{line}")
+    return "\n".join(out) + "\n"
+
+
+def cbl(rel, body, **kw):
+    write(rel, cobol(rel, body), **kw)
+
+
+# ---------------------------------------------------------------- copybooks
+cbl("mainframe/copybooks/POLREC.cpy", r"""
+*================================================================
+* POLREC   POLICY MASTER RECORD            CORV.POLMAST  LRECL 400
+*
+* THE PERSON WHO HOLDS THE POLICY IS THE "INSURED" ON THE
+* MAINFRAME. THE SAME PERSON IS PolicyHolder IN policy-admin,
+* PARTY IN THE ORACLE LEDGER, Customer IN THE PORTAL AND
+* policyholder IN claims.claim_party.
+* POL-RISK-DETAIL IS LAID OUT PER LINE OF BUSINESS; EACH RATING
+* PROGRAM RAT<LINE>01 DEFINES ITS OWN VIEW OF THE 60 BYTES.
+* PERSONAL DATA: INSURED-DETAILS (NAME, DOB, NI NUMBER, SSN,
+* ADDRESS, EMAIL).
+*================================================================
+ 01  POL-RECORD.
+     05  POL-NUMBER              PIC X(12).
+     05  POL-LINE-CODE           PIC X(03).
+     05  POL-STATUS              PIC X(01).
+         88  POL-IN-FORCE        VALUE 'F'.
+         88  POL-LAPSED          VALUE 'L'.
+         88  POL-CANCELLED       VALUE 'C'.
+     05  POL-REGION              PIC X(02).
+         88  POL-REGION-UK       VALUE 'UK'.
+         88  POL-REGION-US       VALUE 'US'.
+     05  POL-CURRENCY            PIC X(03).
+     05  INSURED-DETAILS.
+         10  INSURED-NAME        PIC X(40).
+         10  INSURED-DOB         PIC 9(08).
+         10  INSURED-NI-NUMBER   PIC X(09).
+         10  INSURED-SSN         PIC X(09).
+         10  INSURED-ADDR-1      PIC X(35).
+         10  INSURED-ADDR-2      PIC X(35).
+         10  INSURED-TOWN        PIC X(30).
+         10  INSURED-POSTCODE    PIC X(10).
+         10  INSURED-EMAIL       PIC X(60).
+     05  POL-DATES.
+         10  POL-START-DATE      PIC 9(08).
+         10  POL-END-DATE        PIC 9(08).
+         10  POL-NEXT-BILL-DATE  PIC 9(08).
+     05  POL-BILL-FREQ           PIC X(01).
+         88  POL-BILL-MONTHLY    VALUE 'M'.
+         88  POL-BILL-ANNUAL     VALUE 'A'.
+     05  POL-SUM-INSURED         PIC S9(11)V99 COMP-3.
+     05  POL-ANNUAL-PREMIUM      PIC S9(09)V99 COMP-3.
+     05  POL-VOLUNTARY-EXCESS    PIC 9(05).
+     05  POL-RISK-SCORE          PIC 9(03).
+     05  POL-BROKER-ID           PIC X(08).
+     05  POL-RISK-DETAIL         PIC X(60).
+     05  FILLER                  PIC X(29).
+""")
+
+cbl("mainframe/copybooks/CLMREC.cpy", r"""
+*================================================================
+* CLMREC   CLAIM MASTER RECORD             CORV.CLMMAST  LRECL 300
+*
+* READ ONLINE BY CLMINQ0 (TRANSACTION CLMI) AND IN BATCH BY
+* CLMHIST. THE SYSTEM OF RECORD FOR CLAIMS MOVED TO POSTGRES
+* (claims.claim) IN 2024; CLMMAST IS NOW FED NIGHTLY FROM
+* claimsdb SO THE CICS INQUIRY KEEPS WORKING UNTIL THE NEW
+* GET /v1/claims/{id}/summary REPLACES IT (STRANGLER).
+* CLM-FRAUD-SCORE IS THE fraud-scoring SCORE, 0.000 TO 1.000.
+*================================================================
+ 01  CLM-RECORD.
+     05  CLM-NUMBER              PIC X(14).
+     05  CLM-POL-NUMBER          PIC X(12).
+     05  CLM-LINE-CODE           PIC X(03).
+     05  CLM-STATUS              PIC X(03).
+         88  CLM-REGISTERED      VALUE 'REG'.
+         88  CLM-TRIAGED         VALUE 'TRI'.
+         88  CLM-APPROVED        VALUE 'APP'.
+         88  CLM-PAID            VALUE 'PAI'.
+         88  CLM-CLOSED          VALUE 'CLS'.
+         88  CLM-REJECTED        VALUE 'REJ'.
+     05  CLM-LOSS-DATE           PIC 9(08).
+     05  CLM-REPORTED-DATE       PIC 9(08).
+     05  CLM-CLOSED-DATE         PIC 9(08).
+     05  CLM-LOSS-CAUSE          PIC X(06).
+     05  CLM-CLAIMANT-NAME       PIC X(40).
+     05  CLM-CLAIMANT-PHONE      PIC X(15).
+     05  CLM-INJURY-FLAG         PIC X(01).
+     05  CLM-RESERVE-AMT         PIC S9(09)V99 COMP-3.
+     05  CLM-PAID-AMT            PIC S9(09)V99 COMP-3.
+     05  CLM-EXCESS-AMT          PIC S9(05)V99 COMP-3.
+     05  CLM-FRAUD-SCORE         PIC 9V999.
+     05  CLM-ADJUSTER-ID         PIC X(08).
+     05  CLM-CURRENCY            PIC X(03).
+     05  CLM-DESCRIPTION         PIC X(120).
+     05  FILLER                  PIC X(31).
+""")
+
+cbl("mainframe/copybooks/BILLREC.cpy", r"""
+*================================================================
+* BILLREC  DAILY BILLING FILE RECORD   CORV.PRM.BILLING.DAILY
+*          FB LRECL=64, WRITTEN BY PRMBILL (PRMNIGHT STEP030)
+*
+* SENT BY SFTP TO /landing/billing/ (STEP040) AND LOADED BY
+* warehouse-loader load_billing_file INTO dw.premium_billing_stage
+* THEN dw.fn_merge_billing() INTO dw.premium_billing.
+*
+* LAYOUT (OFFSETS FROM 1):
+*   1-12  POLICY-NO       X(12)
+*  13-15  LINE-CODE       X(03)
+*  16-23  BILL-DATE       9(08)   CCYYMMDD
+*  24-34  PREMIUM-AMT     S9(09)V99 ZONED, SIGN OVERPUNCHED IN
+*                                  THE LAST BYTE, 2 IMPLIED DP
+*  35-43  IPT-AMT         S9(07)V99 ZONED, SAME SIGN RULE
+*  44-46  CURRENCY        X(03)   GBP OR USD
+*  47-48  REGION          X(02)   UK OR US
+*  49-64  FILLER          X(16)   SPACES, RESERVED (2019)
+* THE CURRENCY FIELD IS NAMED BILL-CURRENCY BELOW BECAUSE
+* CURRENCY IS A COBOL RESERVED WORD.
+* ANY CHANGE HERE BREAKS warehouse-loader AND THE dw LOAD.
+*================================================================
+ 01  BILL-RECORD.
+     05  POLICY-NO               PIC X(12).
+     05  LINE-CODE               PIC X(03).
+     05  BILL-DATE               PIC 9(08).
+     05  PREMIUM-AMT             PIC S9(09)V99.
+     05  IPT-AMT                 PIC S9(07)V99.
+     05  BILL-CURRENCY           PIC X(03).
+     05  REGION                  PIC X(02).
+     05  FILLER                  PIC X(16).
+""")
+
+cbl("mainframe/copybooks/RATEREC.cpy", r"""
+*================================================================
+* RATEREC  RATED POLICY RECORD          CORV.PRM.RATED  LRECL 120
+*          WRITTEN BY PRMCALC (STEP020), READ BY PRMBILL (STEP030)
+*          ALSO PASSED TO EVERY RAT<LINE>01 PROGRAM AND PRMRULES.
+*================================================================
+ 01  RATE-RECORD.
+     05  RATE-POL-NUMBER         PIC X(12).
+     05  RATE-LINE-CODE          PIC X(03).
+     05  RATE-REGION             PIC X(02).
+     05  RATE-CURRENCY           PIC X(03).
+     05  RATE-BILL-DATE          PIC 9(08).
+     05  RATE-BILL-FREQ          PIC X(01).
+     05  RATE-BASE-PREMIUM       PIC S9(09)V99 COMP-3.
+     05  RATE-LOADINGS           PIC S9(07)V99 COMP-3.
+     05  RATE-DISCOUNTS          PIC S9(07)V99 COMP-3.
+     05  RATE-EXCESS-COMPULSORY  PIC 9(05).
+     05  RATE-EXCESS-VOLUNTARY   PIC 9(05).
+     05  RATE-NET-PREMIUM        PIC S9(09)V99 COMP-3.
+     05  RATE-IPT-RATE           PIC 9V9999 COMP-3.
+     05  RATE-IPT-AMT            PIC S9(07)V99 COMP-3.
+     05  RATE-RULES-FIRED        PIC 9(04).
+     05  RATE-LAST-RULE          PIC X(06).
+     05  RATE-REFER-FLAG         PIC X(01).
+         88  RATE-REFER          VALUE 'Y'.
+     05  RATE-RETURN-CODE        PIC 9(02).
+         88  RATE-OK             VALUE 00.
+         88  RATE-NO-RATING-PGM  VALUE 90.
+         88  RATE-DECLINED       VALUE 95.
+     05  FILLER                  PIC X(38).
+""")
+
+cbl("mainframe/copybooks/PRMCOMM.cpy", r"""
+*================================================================
+* PRMCOMM  COMMAREA OF CICS PROGRAM PRMCALC0 (256 BYTES)
+*
+* policy-admin MainframePremiumAdapter BUILDS THIS AREA AND CALLS
+* PRMCALC0 THROUGH CICS TRANSACTION GATEWAY SERVER CORVCTG1 WHEN
+* FLAG policy.premium-engine = mainframe (PROD ONLY).
+* ALL NUMBERS ARE UNSIGNED ZONED DECIMAL SO THE JAVA SIDE CAN MAP
+* THEM AS TEXT. RSP-RETURN-CODE: 00 OK, 08 REFER, 12 BAD REQUEST,
+* 90 NO RATING PROGRAM FOR THE LINE.
+*================================================================
+ 01  PRMCOMM-AREA.
+     05  PRMCOMM-VERSION         PIC X(02).
+     05  PRMCOMM-REQUEST.
+         10  REQ-QUOTE-ID        PIC X(20).
+         10  REQ-LINE-CODE       PIC X(03).
+         10  REQ-REGION          PIC X(02).
+         10  REQ-CURRENCY        PIC X(03).
+         10  REQ-EFFECTIVE-DATE  PIC 9(08).
+         10  REQ-SUM-INSURED     PIC 9(11)V99.
+         10  REQ-VOLUNTARY-XS    PIC 9(05).
+         10  REQ-RISK-SCORE      PIC 9(03).
+         10  REQ-POSTCODE        PIC X(10).
+         10  REQ-INSURED-DOB     PIC 9(08).
+         10  REQ-RISK-DETAIL     PIC X(60).
+     05  PRMCOMM-RESPONSE.
+         10  RSP-BASE-PREMIUM    PIC 9(09)V99.
+         10  RSP-LOADINGS        PIC 9(07)V99.
+         10  RSP-DISCOUNTS       PIC 9(07)V99.
+         10  RSP-EXCESS-TOTAL    PIC 9(05).
+         10  RSP-IPT-AMT         PIC 9(07)V99.
+         10  RSP-TOTAL-PREMIUM   PIC 9(09)V99.
+         10  RSP-REFER-FLAG      PIC X(01).
+         10  RSP-RETURN-CODE     PIC 9(02).
+         10  RSP-MESSAGE         PIC X(40).
+     05  FILLER                  PIC X(02).
+""")
+
+cbl("mainframe/copybooks/CLMINQS.cpy", r"""
+*================================================================
+* CLMINQS  SYMBOLIC MAP FOR MAPSET CLMINQS, MAP CLMINQM
+*          (ASSEMBLED FROM mainframe/cics/CLMINQS.bms)
+*================================================================
+ 01  CLMINQMI.
+     05  FILLER                  PIC X(12).
+     05  CLMNOL                  PIC S9(4) COMP.
+     05  CLMNOF                  PIC X.
+     05  CLMNOI                  PIC X(14).
+     05  POLNOL                  PIC S9(4) COMP.
+     05  POLNOF                  PIC X.
+     05  POLNOI                  PIC X(12).
+     05  STATL                   PIC S9(4) COMP.
+     05  STATF                   PIC X.
+     05  STATI                   PIC X(03).
+     05  LOSSDTL                 PIC S9(4) COMP.
+     05  LOSSDTF                 PIC X.
+     05  LOSSDTI                 PIC X(10).
+     05  CAUSEL                  PIC S9(4) COMP.
+     05  CAUSEF                  PIC X.
+     05  CAUSEI                  PIC X(06).
+     05  RESVL                   PIC S9(4) COMP.
+     05  RESVF                   PIC X.
+     05  RESVI                   PIC X(14).
+     05  PAIDL                   PIC S9(4) COMP.
+     05  PAIDF                   PIC X.
+     05  PAIDI                   PIC X(14).
+     05  FRAUDL                  PIC S9(4) COMP.
+     05  FRAUDF                  PIC X.
+     05  FRAUDA REDEFINES FRAUDF PIC X.
+     05  FRAUDI                  PIC X(05).
+     05  ADJL                    PIC S9(4) COMP.
+     05  ADJF                    PIC X.
+     05  ADJI                    PIC X(08).
+     05  CLMTL                   PIC S9(4) COMP.
+     05  CLMTF                   PIC X.
+     05  CLMTI                   PIC X(40).
+     05  MSGL                    PIC S9(4) COMP.
+     05  MSGF                    PIC X.
+     05  MSGI                    PIC X(60).
+ 01  CLMINQMO REDEFINES CLMINQMI.
+     05  FILLER                  PIC X(12).
+     05  FILLER                  PIC X(3).
+     05  CLMNOO                  PIC X(14).
+     05  FILLER                  PIC X(3).
+     05  POLNOO                  PIC X(12).
+     05  FILLER                  PIC X(3).
+     05  STATO                   PIC X(03).
+     05  FILLER                  PIC X(3).
+     05  LOSSDTO                 PIC X(10).
+     05  FILLER                  PIC X(3).
+     05  CAUSEO                  PIC X(06).
+     05  FILLER                  PIC X(3).
+     05  RESVO                   PIC X(14).
+     05  FILLER                  PIC X(3).
+     05  PAIDO                   PIC X(14).
+     05  FILLER                  PIC X(2).
+     05  FRAUDC                  PIC X.
+     05  FRAUDO                  PIC X(05).
+     05  FILLER                  PIC X(3).
+     05  ADJO                    PIC X(08).
+     05  FILLER                  PIC X(3).
+     05  CLMTO                   PIC X(40).
+     05  FILLER                  PIC X(3).
+     05  MSGO                    PIC X(60).
+""")
+
+# ---------------------------------------------------------------- programs
+cbl("mainframe/cobol/PRMEXTR.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. PRMEXTR.
+ AUTHOR. CORVANE MAINFRAME BILLING.
+*================================================================
+* PRMEXTR  NIGHTLY PREMIUM EXTRACT              PRMNIGHT STEP010
+*
+* READS THE POLICY MASTER (VSAM KSDS CORV.POLMAST, COPY POLREC)
+* AND WRITES EVERY IN-FORCE POLICY WHOSE NEXT BILL DATE IS ON OR
+* BEFORE THE RUN DATE TO CORV.PRM.EXTRACT FOR PRMCALC.
+* RUN DATE COMES FROM PARMLIB MEMBER PRMPARM01 (DD PARMIN).
+* LINES SWITCHED OFF IN PRMPARM02 (DD LINESIN) ARE SKIPPED.
+*
+* CHANGE LOG
+* 2014-06 ORIGINAL VERSION.
+* 2019-03 MANTENIMIENTO: SE AGREGO EL FILTRO DE LINEAS DE NEGOCIO
+*         (PRMPARM02) PARA EXCLUIR LA CARGA MARITIMA. J.R.
+* 2023-11 US POLICIES ADDED (POL-REGION 'US').
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT POLMAST ASSIGN TO POLMAST
+         ORGANIZATION IS INDEXED
+         ACCESS MODE IS SEQUENTIAL
+         RECORD KEY IS POL-NUMBER
+         FILE STATUS IS WS-POLMAST-FS.
+     SELECT EXTRACT-FILE ASSIGN TO EXTRACT
+         FILE STATUS IS WS-EXTRACT-FS.
+     SELECT PARM-FILE ASSIGN TO PARMIN.
+     SELECT LINES-FILE ASSIGN TO LINESIN.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  POLMAST.
+     COPY POLREC.
+ FD  EXTRACT-FILE
+     RECORDING MODE IS F.
+ 01  EXTRACT-REC                 PIC X(400).
+ FD  PARM-FILE.
+ 01  PARM-CARD                   PIC X(80).
+ FD  LINES-FILE.
+ 01  LINE-CARD                   PIC X(80).
+ WORKING-STORAGE SECTION.
+ 01  WS-FILE-STATUS.
+     05  WS-POLMAST-FS           PIC X(02).
+     05  WS-EXTRACT-FS           PIC X(02).
+ 01  WS-SWITCHES.
+     05  WS-EOF-SW               PIC X(01) VALUE 'N'.
+         88  WS-EOF              VALUE 'Y'.
+     05  WS-PARM-EOF-SW          PIC X(01) VALUE 'N'.
+         88  WS-PARM-EOF         VALUE 'Y'.
+ 01  WS-RUN-DATE                 PIC 9(08) VALUE ZERO.
+ 01  WS-LINE-TABLE.
+     05  WS-LINE-ENTRY OCCURS 12 TIMES INDEXED BY WS-LX.
+         10  WS-LINE-CODE        PIC X(03).
+         10  WS-LINE-ACTIVE      PIC X(01).
+ 01  WS-LINE-COUNT               PIC 9(02) VALUE ZERO.
+ 01  WS-COUNTERS.
+     05  WS-READ-CNT             PIC 9(09) COMP VALUE ZERO.
+     05  WS-WRITTEN-CNT          PIC 9(09) COMP VALUE ZERO.
+     05  WS-SKIP-STATUS-CNT      PIC 9(09) COMP VALUE ZERO.
+     05  WS-SKIP-LINE-CNT        PIC 9(09) COMP VALUE ZERO.
+     05  WS-NOT-DUE-CNT          PIC 9(09) COMP VALUE ZERO.
+ 01  WS-DATE-PARMS.
+     05  WS-DU-FUNCTION          PIC X(01).
+     05  WS-DU-DATE-1            PIC 9(08).
+     05  WS-DU-DATE-2            PIC 9(08).
+     05  WS-DU-DAYS              PIC S9(07) COMP-3.
+     05  WS-DU-RC                PIC 9(02).
+ 01  WS-DISPLAY-CNT              PIC Z(8)9.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     PERFORM 1000-INITIALISE
+     PERFORM 2000-PROCESS-POLICY UNTIL WS-EOF
+     PERFORM 9000-TERMINATE
+     GOBACK.
+ 1000-INITIALISE.
+     OPEN INPUT POLMAST PARM-FILE LINES-FILE
+          OUTPUT EXTRACT-FILE
+     IF WS-POLMAST-FS NOT = '00'
+         DISPLAY 'PRMEXTR: POLMAST OPEN FAILED ' WS-POLMAST-FS
+         MOVE 16 TO RETURN-CODE
+         STOP RUN
+     END-IF
+     PERFORM 1100-READ-PARMS
+     PERFORM 1200-LOAD-LINES
+     PERFORM 8000-READ-POLMAST.
+ 1100-READ-PARMS.
+*    PRMPARM01 CARDS ARE KEYWORD=VALUE. ONLY RUNDATE IS USED HERE.
+     PERFORM UNTIL WS-PARM-EOF
+         READ PARM-FILE
+             AT END SET WS-PARM-EOF TO TRUE
+             NOT AT END
+                 IF PARM-CARD(1:8) = 'RUNDATE='
+                     IF PARM-CARD(9:6) = '*TODAY'
+                         ACCEPT WS-RUN-DATE FROM DATE YYYYMMDD
+                     ELSE
+                         MOVE PARM-CARD(9:8) TO WS-RUN-DATE
+                     END-IF
+                 END-IF
+         END-READ
+     END-PERFORM
+     IF WS-RUN-DATE = ZERO
+         ACCEPT WS-RUN-DATE FROM DATE YYYYMMDD
+     END-IF
+     MOVE 'V' TO WS-DU-FUNCTION
+     MOVE WS-RUN-DATE TO WS-DU-DATE-1
+     CALL 'DATEUTL' USING WS-DATE-PARMS
+     IF WS-DU-RC NOT = ZERO
+         DISPLAY 'PRMEXTR: INVALID RUN DATE ' WS-RUN-DATE
+         MOVE 12 TO RETURN-CODE
+         STOP RUN
+     END-IF.
+ 1200-LOAD-LINES.
+*    PRMPARM02: ONE CARD PER LINE, CODE IN COLS 1-3, Y/N IN COL 5.
+     MOVE 'N' TO WS-PARM-EOF-SW
+     PERFORM UNTIL WS-PARM-EOF OR WS-LINE-COUNT = 12
+         READ LINES-FILE
+             AT END SET WS-PARM-EOF TO TRUE
+             NOT AT END
+                 IF LINE-CARD(1:1) NOT = '*'
+                     ADD 1 TO WS-LINE-COUNT
+                     MOVE LINE-CARD(1:3)
+                       TO WS-LINE-CODE(WS-LINE-COUNT)
+                     MOVE LINE-CARD(5:1)
+                       TO WS-LINE-ACTIVE(WS-LINE-COUNT)
+                 END-IF
+         END-READ
+     END-PERFORM.
+ 2000-PROCESS-POLICY.
+     ADD 1 TO WS-READ-CNT
+     EVALUATE TRUE
+         WHEN NOT POL-IN-FORCE
+             ADD 1 TO WS-SKIP-STATUS-CNT
+         WHEN POL-NEXT-BILL-DATE > WS-RUN-DATE
+             ADD 1 TO WS-NOT-DUE-CNT
+         WHEN OTHER
+             PERFORM 2100-CHECK-LINE
+     END-EVALUATE
+     PERFORM 8000-READ-POLMAST.
+ 2100-CHECK-LINE.
+     SET WS-LX TO 1
+     SEARCH WS-LINE-ENTRY
+         AT END
+*            A LINE MISSING FROM PRMPARM02 IS TREATED AS ACTIVE
+             PERFORM 2200-WRITE-EXTRACT
+         WHEN WS-LINE-CODE(WS-LX) = POL-LINE-CODE
+             IF WS-LINE-ACTIVE(WS-LX) = 'Y'
+                 PERFORM 2200-WRITE-EXTRACT
+             ELSE
+                 ADD 1 TO WS-SKIP-LINE-CNT
+             END-IF
+     END-SEARCH.
+ 2200-WRITE-EXTRACT.
+     WRITE EXTRACT-REC FROM POL-RECORD
+     ADD 1 TO WS-WRITTEN-CNT.
+ 8000-READ-POLMAST.
+     READ POLMAST NEXT RECORD
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+ 9000-TERMINATE.
+     CLOSE POLMAST PARM-FILE LINES-FILE EXTRACT-FILE
+     MOVE WS-READ-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMEXTR POLICIES READ      ' WS-DISPLAY-CNT
+     MOVE WS-WRITTEN-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMEXTR POLICIES EXTRACTED ' WS-DISPLAY-CNT
+     MOVE WS-NOT-DUE-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMEXTR NOT YET DUE        ' WS-DISPLAY-CNT
+     MOVE WS-SKIP-LINE-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMEXTR LINE SWITCHED OFF  ' WS-DISPLAY-CNT
+     IF WS-WRITTEN-CNT = ZERO
+         MOVE 4 TO RETURN-CODE
+     END-IF.
+""")
+
+cbl("mainframe/cobol/PRMCALC.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. PRMCALC.
+ AUTHOR. CORVANE MAINFRAME BILLING.
+*================================================================
+* PRMCALC  NIGHTLY PREMIUM CALCULATION           PRMNIGHT STEP020
+*
+* FOR EACH POLICY ON CORV.PRM.EXTRACT (POLREC):
+*   1. CALL THE LINE'S RATING PROGRAM, NAMED 'RAT' + LINE + '01'
+*      (DYNAMIC CALL, E.G. RATMTR01, RATHOM01).
+*   2. CALL PRMRULES FOR THE UNDERWRITING RULE TABLE.
+*   3. APPLY THE EXCESS (3000-APPLY-EXCESS).
+*   4. WORK OUT THE NET PREMIUM FOR THE BILLING PERIOD.
+*   5. CALL IPTCALC FOR INSURANCE PREMIUM TAX.
+* WRITES CORV.PRM.RATED (RATEREC) FOR PRMBILL.
+*
+* NOTE: THE SAME EXCESS RULE IS CODED IN JAVA (policy-admin
+* RatingService.applyExcess) AND IN claims-service
+* (ClaimSettlementCalculator). THEY HAVE DRIFTED - SEE 3000.
+*
+* CHANGE LOG
+* 2014-06 ORIGINAL.
+* 2017-04 COMPULSORY EXCESS RAISED 150 -> 200 (MEMO UW-2017-04).
+* 2021-09 DYNAMIC CALL OF RAT<LINE>01 REPLACES THE OLD EVALUATE.
+* 2022-02 ARANDHAN: PRMRULES KO HAR POLICY KE LIYE BULAYA JATA
+*         HAI, PEHLE SIRF MOTOR KE LIYE THA. (S.K.)
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT EXTRACT-FILE ASSIGN TO EXTRACT
+         FILE STATUS IS WS-EXTRACT-FS.
+     SELECT RATED-FILE ASSIGN TO RATED
+         FILE STATUS IS WS-RATED-FS.
+     SELECT PARM-FILE ASSIGN TO PARMIN.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  EXTRACT-FILE
+     RECORDING MODE IS F.
+     COPY POLREC.
+ FD  RATED-FILE
+     RECORDING MODE IS F.
+ 01  RATED-REC                   PIC X(120).
+ FD  PARM-FILE.
+ 01  PARM-CARD                   PIC X(80).
+ WORKING-STORAGE SECTION.
+     COPY RATEREC.
+ 01  WS-FILE-STATUS.
+     05  WS-EXTRACT-FS           PIC X(02).
+     05  WS-RATED-FS             PIC X(02).
+ 01  WS-SWITCHES.
+     05  WS-EOF-SW               PIC X(01) VALUE 'N'.
+         88  WS-EOF              VALUE 'Y'.
+     05  WS-PARM-EOF-SW          PIC X(01) VALUE 'N'.
+         88  WS-PARM-EOF         VALUE 'Y'.
+ 01  WS-RUN-DATE                 PIC 9(08) VALUE ZERO.
+ 01  WS-RATING-PGM               PIC X(08).
+ 01  WS-EXCESS-WORK.
+     05  WS-COMPULSORY-EXCESS    PIC 9(05) VALUE 200.
+     05  WS-TOTAL-EXCESS         PIC 9(06).
+     05  WS-VOL-DISC-PCT         PIC 9(03)V99.
+     05  WS-EXCESS-DISCOUNT      PIC S9(07)V99 COMP-3.
+ 01  WS-MIN-PREMIUM              PIC 9(03)V99 VALUE 25.00.
+ 01  WS-REFER-SCORE              PIC 9(03) VALUE 850.
+ 01  WS-COUNTERS.
+     05  WS-READ-CNT             PIC 9(09) COMP VALUE ZERO.
+     05  WS-RATED-CNT            PIC 9(09) COMP VALUE ZERO.
+     05  WS-REFER-CNT            PIC 9(09) COMP VALUE ZERO.
+     05  WS-NOPGM-CNT            PIC 9(09) COMP VALUE ZERO.
+ 01  WS-DISPLAY-CNT              PIC Z(8)9.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     PERFORM 1000-INITIALISE
+     PERFORM 2000-RATE-POLICY UNTIL WS-EOF
+     PERFORM 9000-TERMINATE
+     GOBACK.
+ 1000-INITIALISE.
+     OPEN INPUT EXTRACT-FILE PARM-FILE
+          OUTPUT RATED-FILE
+*    ONLY RUNDATE= IS READ FROM PRMPARM01. THE EXCESS-COMP= CARD
+*    IN THAT MEMBER IS NOT READ BY THIS PROGRAM (SEE 3000).
+     PERFORM UNTIL WS-PARM-EOF
+         READ PARM-FILE
+             AT END SET WS-PARM-EOF TO TRUE
+             NOT AT END
+                 IF PARM-CARD(1:8) = 'RUNDATE='
+                    AND PARM-CARD(9:6) NOT = '*TODAY'
+                     MOVE PARM-CARD(9:8) TO WS-RUN-DATE
+                 END-IF
+         END-READ
+     END-PERFORM
+     IF WS-RUN-DATE = ZERO
+         ACCEPT WS-RUN-DATE FROM DATE YYYYMMDD
+     END-IF
+     PERFORM 8000-READ-EXTRACT.
+ 2000-RATE-POLICY.
+     ADD 1 TO WS-READ-CNT
+     INITIALIZE RATE-RECORD
+     MOVE POL-NUMBER         TO RATE-POL-NUMBER
+     MOVE POL-LINE-CODE      TO RATE-LINE-CODE
+     MOVE POL-REGION         TO RATE-REGION
+     MOVE POL-CURRENCY       TO RATE-CURRENCY
+     MOVE WS-RUN-DATE        TO RATE-BILL-DATE
+     MOVE POL-BILL-FREQ      TO RATE-BILL-FREQ
+     MOVE 'N'                TO RATE-REFER-FLAG
+     STRING 'RAT' POL-LINE-CODE '01' DELIMITED BY SIZE
+         INTO WS-RATING-PGM
+     CALL WS-RATING-PGM USING POL-RECORD RATE-RECORD
+         ON EXCEPTION
+             SET RATE-NO-RATING-PGM TO TRUE
+             SET RATE-REFER TO TRUE
+             ADD 1 TO WS-NOPGM-CNT
+             DISPLAY 'PRMCALC: NO RATING PROGRAM ' WS-RATING-PGM
+                     ' FOR ' POL-NUMBER
+     END-CALL
+     IF RATE-OK
+         CALL 'PRMRULES' USING POL-RECORD RATE-RECORD
+         PERFORM 3000-APPLY-EXCESS
+         PERFORM 4000-NET-PREMIUM
+         CALL 'IPTCALC' USING RATE-LINE-CODE RATE-REGION
+                              RATE-NET-PREMIUM RATE-IPT-RATE
+                              RATE-IPT-AMT
+     END-IF
+     IF RATE-REFER
+         ADD 1 TO WS-REFER-CNT
+     END-IF
+     WRITE RATED-REC FROM RATE-RECORD
+     ADD 1 TO WS-RATED-CNT
+     PERFORM 8000-READ-EXTRACT.
+ 3000-APPLY-EXCESS.
+*    COMPULSORY EXCESS IS 200 (MEMO UW-2017-04). THE JAVA RATING
+*    SERVICE AND THE CLAIMS SERVICE USE 250 SINCE 2024; THIS
+*    PROGRAM WAS NEVER CHANGED. PRMPARM01 SAYS EXCESS-COMP=250
+*    BUT IT IS NOT READ HERE.
+*    VOLUNTARY EXCESS EARNS 5% DISCOUNT PER 100, AT MOST 20%.
+*    ROUNDED IS HALF-UP (AWAY FROM ZERO) ON THIS COMPILER.
+     MOVE WS-COMPULSORY-EXCESS TO RATE-EXCESS-COMPULSORY
+     MOVE POL-VOLUNTARY-EXCESS TO RATE-EXCESS-VOLUNTARY
+     COMPUTE WS-TOTAL-EXCESS = WS-COMPULSORY-EXCESS
+                             + POL-VOLUNTARY-EXCESS
+     COMPUTE WS-VOL-DISC-PCT = (POL-VOLUNTARY-EXCESS / 100) * 5
+     IF WS-VOL-DISC-PCT > 20
+         MOVE 20 TO WS-VOL-DISC-PCT
+     END-IF
+     COMPUTE WS-EXCESS-DISCOUNT ROUNDED =
+         RATE-BASE-PREMIUM * WS-VOL-DISC-PCT / 100
+     ADD WS-EXCESS-DISCOUNT TO RATE-DISCOUNTS.
+ 4000-NET-PREMIUM.
+     COMPUTE RATE-NET-PREMIUM ROUNDED =
+         RATE-BASE-PREMIUM + RATE-LOADINGS - RATE-DISCOUNTS
+     IF RATE-NET-PREMIUM < WS-MIN-PREMIUM
+         MOVE WS-MIN-PREMIUM TO RATE-NET-PREMIUM
+     END-IF
+     IF RATE-BILL-FREQ = 'M'
+         COMPUTE RATE-NET-PREMIUM ROUNDED = RATE-NET-PREMIUM / 12
+     END-IF
+     IF POL-RISK-SCORE > WS-REFER-SCORE
+         SET RATE-REFER TO TRUE
+     END-IF.
+ 8000-READ-EXTRACT.
+     READ EXTRACT-FILE
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+ 9000-TERMINATE.
+     CLOSE EXTRACT-FILE PARM-FILE RATED-FILE
+     MOVE WS-RATED-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMCALC POLICIES RATED     ' WS-DISPLAY-CNT
+     MOVE WS-REFER-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMCALC REFERRED           ' WS-DISPLAY-CNT
+     MOVE WS-NOPGM-CNT TO WS-DISPLAY-CNT
+     DISPLAY 'PRMCALC NO RATING PROGRAM  ' WS-DISPLAY-CNT
+     IF WS-NOPGM-CNT > ZERO
+         MOVE 4 TO RETURN-CODE
+     END-IF.
+""")
+
+cbl("mainframe/cobol/PRMBILL.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. PRMBILL.
+ AUTHOR. CORVANE MAINFRAME BILLING.
+*================================================================
+* PRMBILL  DAILY BILLING FILE                    PRMNIGHT STEP030
+*
+* READS CORV.PRM.RATED (RATEREC) AND WRITES ONE BILLREC PER RATED
+* POLICY TO CORV.PRM.BILLING.DAILY(+1), LRECL 64. RECORDS WITH A
+* RATING RETURN CODE OF 90 OR MORE GO TO THE REJECTS REPORT AND
+* ARE NOT BILLED. REFERRED POLICIES ARE STILL BILLED; UNDERWRITING
+* REVIEWS THEM FROM THE REFERRALS REPORT THE NEXT MORNING.
+* THE BILLING FILE HAS NO HEADER OR TRAILER: CONTROL TOTALS GO TO
+* SYSOUT ONLY (warehouse-loader CHECKS THE RECORD COUNT AGAINST
+* ITS OWN COUNT AND STORES IT IN dw.billing_load).
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT RATED-FILE ASSIGN TO RATED
+         FILE STATUS IS WS-RATED-FS.
+     SELECT BILLING-FILE ASSIGN TO BILLING
+         FILE STATUS IS WS-BILLING-FS.
+     SELECT REJECT-FILE ASSIGN TO REJECTS.
+     SELECT REFER-FILE ASSIGN TO REFERRAL.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  RATED-FILE
+     RECORDING MODE IS F.
+     COPY RATEREC.
+ FD  BILLING-FILE
+     RECORDING MODE IS F.
+     COPY BILLREC.
+ FD  REJECT-FILE.
+ 01  REJECT-LINE                 PIC X(133).
+ FD  REFER-FILE.
+ 01  REFER-LINE                  PIC X(133).
+ WORKING-STORAGE SECTION.
+ 01  WS-FILE-STATUS.
+     05  WS-RATED-FS             PIC X(02).
+     05  WS-BILLING-FS           PIC X(02).
+ 01  WS-EOF-SW                   PIC X(01) VALUE 'N'.
+     88  WS-EOF                  VALUE 'Y'.
+ 01  WS-TOTALS.
+     05  WS-BILLED-CNT           PIC 9(09) COMP VALUE ZERO.
+     05  WS-REJECT-CNT           PIC 9(09) COMP VALUE ZERO.
+     05  WS-REFER-CNT            PIC 9(09) COMP VALUE ZERO.
+     05  WS-GBP-PREMIUM          PIC S9(13)V99 COMP-3 VALUE ZERO.
+     05  WS-USD-PREMIUM          PIC S9(13)V99 COMP-3 VALUE ZERO.
+     05  WS-GBP-IPT              PIC S9(11)V99 COMP-3 VALUE ZERO.
+ 01  WS-REPORT-LINE.
+     05  FILLER                  PIC X(01) VALUE SPACE.
+     05  WS-RL-POLICY            PIC X(12).
+     05  FILLER                  PIC X(02) VALUE SPACES.
+     05  WS-RL-LINE              PIC X(03).
+     05  FILLER                  PIC X(02) VALUE SPACES.
+     05  WS-RL-REASON            PIC X(40).
+     05  FILLER                  PIC X(73) VALUE SPACES.
+ 01  WS-EDIT-CNT                 PIC Z(8)9.
+ 01  WS-EDIT-AMT                 PIC Z(12)9.99-.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     OPEN INPUT RATED-FILE
+          OUTPUT BILLING-FILE REJECT-FILE REFER-FILE
+     PERFORM 8000-READ-RATED
+     PERFORM 2000-BILL UNTIL WS-EOF
+     PERFORM 9000-TOTALS
+     CLOSE RATED-FILE BILLING-FILE REJECT-FILE REFER-FILE
+     GOBACK.
+ 2000-BILL.
+     IF RATE-RETURN-CODE >= 90
+         MOVE RATE-POL-NUMBER TO WS-RL-POLICY
+         MOVE RATE-LINE-CODE TO WS-RL-LINE
+         MOVE 'NOT RATED - NO RATING PROGRAM' TO WS-RL-REASON
+         WRITE REJECT-LINE FROM WS-REPORT-LINE
+         ADD 1 TO WS-REJECT-CNT
+     ELSE
+         PERFORM 2100-WRITE-BILL
+         IF RATE-REFER
+             MOVE RATE-POL-NUMBER TO WS-RL-POLICY
+             MOVE RATE-LINE-CODE TO WS-RL-LINE
+             MOVE 'REFERRED - BILLED, UNDERWRITER TO REVIEW'
+               TO WS-RL-REASON
+             WRITE REFER-LINE FROM WS-REPORT-LINE
+             ADD 1 TO WS-REFER-CNT
+         END-IF
+     END-IF
+     PERFORM 8000-READ-RATED.
+ 2100-WRITE-BILL.
+     MOVE SPACES            TO BILL-RECORD
+     MOVE RATE-POL-NUMBER   TO POLICY-NO
+     MOVE RATE-LINE-CODE    TO LINE-CODE
+     MOVE RATE-BILL-DATE    TO BILL-DATE
+     MOVE RATE-NET-PREMIUM  TO PREMIUM-AMT
+     MOVE RATE-IPT-AMT      TO IPT-AMT
+     MOVE RATE-CURRENCY     TO BILL-CURRENCY
+     MOVE RATE-REGION       TO REGION
+     WRITE BILL-RECORD
+     ADD 1 TO WS-BILLED-CNT
+     IF RATE-CURRENCY = 'GBP'
+         ADD RATE-NET-PREMIUM TO WS-GBP-PREMIUM
+         ADD RATE-IPT-AMT TO WS-GBP-IPT
+     ELSE
+         ADD RATE-NET-PREMIUM TO WS-USD-PREMIUM
+     END-IF.
+ 8000-READ-RATED.
+     READ RATED-FILE
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+ 9000-TOTALS.
+     MOVE WS-BILLED-CNT TO WS-EDIT-CNT
+     DISPLAY 'PRMBILL CONTROL TOTALS'
+     DISPLAY '  RECORDS BILLED    ' WS-EDIT-CNT
+     MOVE WS-REJECT-CNT TO WS-EDIT-CNT
+     DISPLAY '  RECORDS REJECTED  ' WS-EDIT-CNT
+     MOVE WS-REFER-CNT TO WS-EDIT-CNT
+     DISPLAY '  RECORDS REFERRED  ' WS-EDIT-CNT
+     MOVE WS-GBP-PREMIUM TO WS-EDIT-AMT
+     DISPLAY '  GBP PREMIUM       ' WS-EDIT-AMT
+     MOVE WS-GBP-IPT TO WS-EDIT-AMT
+     DISPLAY '  GBP IPT           ' WS-EDIT-AMT
+     MOVE WS-USD-PREMIUM TO WS-EDIT-AMT
+     DISPLAY '  USD PREMIUM       ' WS-EDIT-AMT
+     IF WS-REJECT-CNT > ZERO
+         MOVE 4 TO RETURN-CODE
+     END-IF.
+""")
+
+cbl("mainframe/cobol/CLMINQ0.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. CLMINQ0.
+ AUTHOR. CORVANE CLAIMS SYSTEMS.
+*================================================================
+* CLMINQ0  CLAIMS INQUIRY (CICS)                 TRANSACTION CLMI
+*
+* PSEUDO-CONVERSATIONAL. FIRST ENTRY SENDS AN EMPTY MAP CLMINQM
+* (MAPSET CLMINQS). THE ADJUSTER KEYS A CLAIM NUMBER; THE PROGRAM
+* READS VSAM FILE CLMMAST (CORV.CLMMAST, COPY CLMREC) AND SHOWS
+* STATUS, LOSS DATE, RESERVE, PAID, FRAUD SCORE AND ADJUSTER.
+* A FRAUD SCORE ABOVE 0.720 IS SHOWN BRIGHT WITH "REFER" - THE
+* SAME CUT-OFF AS fraud-scoring REFER_THRESHOLD (ADR-0011 SAYS
+* 0.80; THE CODE IN BOTH PLACES SAYS 0.72).
+* BEING REPLACED BY claims-service GET /v1/claims/{id}/summary
+* (STRANGLER, ADR-0010). READ-ONLY: NO UPDATES FROM THIS SCREEN.
+* PF3 = EXIT, ENTER = INQUIRE.
+*================================================================
+ DATA DIVISION.
+ WORKING-STORAGE SECTION.
+     COPY CLMREC.
+     COPY CLMINQS.
+     COPY DFHAID.
+     COPY DFHBMSCA.
+ 01  WS-RESP                     PIC S9(08) COMP.
+ 01  WS-CLAIM-KEY                PIC X(14).
+ 01  WS-REFER-THRESHOLD          PIC 9V999 VALUE 0.720.
+ 01  WS-EDIT-AMT                 PIC Z(9)9.99-.
+ 01  WS-EDIT-SCORE               PIC 9.999.
+ 01  WS-DATE-OUT.
+     05  WS-DD                   PIC X(02).
+     05  FILLER                  PIC X(01) VALUE '/'.
+     05  WS-MM                   PIC X(02).
+     05  FILLER                  PIC X(01) VALUE '/'.
+     05  WS-CCYY                 PIC X(04).
+ 01  WS-DATE-IN                  PIC X(08).
+ 01  WS-COMMAREA                 PIC X(01) VALUE 'C'.
+ LINKAGE SECTION.
+ 01  DFHCOMMAREA                 PIC X(01).
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     IF EIBCALEN = ZERO
+         PERFORM 1000-FIRST-TIME
+     ELSE
+         EVALUATE EIBAID
+             WHEN DFHPF3
+                 PERFORM 9000-EXIT
+             WHEN DFHENTER
+                 PERFORM 2000-INQUIRE
+             WHEN OTHER
+                 MOVE 'INVALID KEY - USE ENTER OR PF3' TO MSGO
+                 PERFORM 8000-SEND-DATAONLY
+         END-EVALUATE
+     END-IF
+     EXEC CICS RETURN TRANSID('CLMI')
+               COMMAREA(WS-COMMAREA) LENGTH(1)
+     END-EXEC.
+ 1000-FIRST-TIME.
+     MOVE LOW-VALUES TO CLMINQMO
+     MOVE 'ENTER A CLAIM NUMBER AND PRESS ENTER' TO MSGO
+     EXEC CICS SEND MAP('CLMINQM') MAPSET('CLMINQS')
+               FROM(CLMINQMO) ERASE
+     END-EXEC.
+ 2000-INQUIRE.
+     EXEC CICS RECEIVE MAP('CLMINQM') MAPSET('CLMINQS')
+               INTO(CLMINQMI) RESP(WS-RESP)
+     END-EXEC
+     IF CLMNOL = ZERO
+         MOVE 'CLAIM NUMBER IS REQUIRED' TO MSGO
+         PERFORM 8000-SEND-DATAONLY
+     ELSE
+         MOVE CLMNOI TO WS-CLAIM-KEY
+         EXEC CICS READ FILE('CLMMAST')
+                   INTO(CLM-RECORD)
+                   RIDFLD(WS-CLAIM-KEY)
+                   RESP(WS-RESP)
+         END-EXEC
+         EVALUATE WS-RESP
+             WHEN DFHRESP(NORMAL)
+                 PERFORM 3000-SHOW-CLAIM
+             WHEN DFHRESP(NOTFND)
+                 MOVE LOW-VALUES TO CLMINQMO
+                 MOVE 'CLAIM NOT FOUND' TO MSGO
+             WHEN OTHER
+                 MOVE 'CLMMAST UNAVAILABLE - TRY LATER' TO MSGO
+         END-EVALUATE
+         PERFORM 8000-SEND-DATAONLY
+     END-IF.
+ 3000-SHOW-CLAIM.
+     MOVE CLM-NUMBER        TO CLMNOO
+     MOVE CLM-POL-NUMBER    TO POLNOO
+     MOVE CLM-STATUS        TO STATO
+     MOVE CLM-LOSS-CAUSE    TO CAUSEO
+     MOVE CLM-ADJUSTER-ID   TO ADJO
+     MOVE CLM-CLAIMANT-NAME TO CLMTO
+     MOVE CLM-LOSS-DATE     TO WS-DATE-IN
+     MOVE WS-DATE-IN(7:2)   TO WS-DD
+     MOVE WS-DATE-IN(5:2)   TO WS-MM
+     MOVE WS-DATE-IN(1:4)   TO WS-CCYY
+     MOVE WS-DATE-OUT       TO LOSSDTO
+     MOVE CLM-RESERVE-AMT   TO WS-EDIT-AMT
+     MOVE WS-EDIT-AMT       TO RESVO
+     MOVE CLM-PAID-AMT      TO WS-EDIT-AMT
+     MOVE WS-EDIT-AMT       TO PAIDO
+     MOVE CLM-FRAUD-SCORE   TO WS-EDIT-SCORE
+     MOVE WS-EDIT-SCORE     TO FRAUDO
+     IF CLM-FRAUD-SCORE > WS-REFER-THRESHOLD
+         MOVE DFHBMBRY TO FRAUDA
+         MOVE 'REFER - FRAUD SCORE ABOVE 0.720' TO MSGO
+     ELSE
+         MOVE DFHBMPRO TO FRAUDA
+         MOVE SPACES TO MSGO
+     END-IF.
+ 8000-SEND-DATAONLY.
+     EXEC CICS SEND MAP('CLMINQM') MAPSET('CLMINQS')
+               FROM(CLMINQMO) DATAONLY
+     END-EXEC.
+ 9000-EXIT.
+     EXEC CICS SEND TEXT FROM('CLAIMS INQUIRY ENDED')
+               LENGTH(20) ERASE FREEKB
+     END-EXEC
+     EXEC CICS RETURN END-EXEC.
+""")
+
+cbl("mainframe/cobol/PRMCALC0.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. PRMCALC0.
+ AUTHOR. CORVANE MAINFRAME BILLING.
+*================================================================
+* PRMCALC0 ONLINE PREMIUM CALCULATION (CICS, CALLED THROUGH CTG)
+*
+* CALLER: policy-admin MainframePremiumAdapter, THROUGH CICS
+* TRANSACTION GATEWAY SERVER CORVCTG1 (IPCONN CORVCTG1 IN
+* corvmf.csd), WHEN policy.premium-engine = mainframe. THAT FLAG
+* IS mainframe IN PROD AND java IN DEV AND TEST, SO DEV AND TEST
+* NEVER EXERCISE THIS PROGRAM.
+* INPUT/OUTPUT: COMMAREA PRMCOMM (256 BYTES).
+* SAME STEPS AS THE BATCH PRMCALC: RAT<LINE>01, PRMRULES, EXCESS,
+* IPTCALC. THE EXCESS PARAGRAPH WAS COPIED FROM PRMCALC IN 2017
+* AND STILL USES A COMPULSORY EXCESS OF 200.
+*================================================================
+ DATA DIVISION.
+ WORKING-STORAGE SECTION.
+     COPY POLREC.
+     COPY RATEREC.
+ 01  WS-RATING-PGM               PIC X(08).
+ 01  WS-COMPULSORY-EXCESS        PIC 9(05) VALUE 200.
+ 01  WS-VOL-DISC-PCT             PIC 9(03)V99.
+ 01  WS-EXCESS-DISCOUNT          PIC S9(07)V99 COMP-3.
+ 01  WS-VALID-LINES              PIC X(36)
+     VALUE 'MTRHOMCNTTRVPETLLDMARCPRPLBPINCYBGDG'.
+ 01  WS-LINE-FOUND               PIC 9(02) VALUE ZERO.
+ LINKAGE SECTION.
+ 01  DFHCOMMAREA.
+     COPY PRMCOMM REPLACING ==01  PRMCOMM-AREA.==
+                         BY ==02  PRMCOMM-AREA.==.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     IF EIBCALEN < 256
+         EXEC CICS ABEND ABCODE('PRM1') END-EXEC
+     END-IF
+     MOVE ZERO TO RSP-RETURN-CODE
+     MOVE SPACES TO RSP-MESSAGE
+     PERFORM 1000-VALIDATE
+     IF RSP-RETURN-CODE = ZERO
+         PERFORM 2000-BUILD-POLICY
+         PERFORM 3000-RATE
+     END-IF
+     EXEC CICS RETURN END-EXEC.
+ 1000-VALIDATE.
+     MOVE ZERO TO WS-LINE-FOUND
+     INSPECT WS-VALID-LINES TALLYING WS-LINE-FOUND
+         FOR ALL REQ-LINE-CODE
+     EVALUATE TRUE
+         WHEN WS-LINE-FOUND = ZERO
+             MOVE 12 TO RSP-RETURN-CODE
+             MOVE 'UNKNOWN LINE OF BUSINESS' TO RSP-MESSAGE
+         WHEN REQ-SUM-INSURED = ZERO
+             MOVE 12 TO RSP-RETURN-CODE
+             MOVE 'SUM INSURED IS REQUIRED' TO RSP-MESSAGE
+         WHEN REQ-REGION NOT = 'UK' AND REQ-REGION NOT = 'US'
+             MOVE 12 TO RSP-RETURN-CODE
+             MOVE 'REGION MUST BE UK OR US' TO RSP-MESSAGE
+     END-EVALUATE.
+ 2000-BUILD-POLICY.
+     INITIALIZE POL-RECORD RATE-RECORD
+     MOVE REQ-QUOTE-ID(1:12)    TO POL-NUMBER
+     MOVE REQ-LINE-CODE         TO POL-LINE-CODE
+     MOVE REQ-REGION            TO POL-REGION
+     MOVE REQ-CURRENCY          TO POL-CURRENCY
+     MOVE REQ-EFFECTIVE-DATE    TO POL-START-DATE
+     MOVE REQ-SUM-INSURED       TO POL-SUM-INSURED
+     MOVE REQ-VOLUNTARY-XS      TO POL-VOLUNTARY-EXCESS
+     MOVE REQ-RISK-SCORE        TO POL-RISK-SCORE
+     MOVE REQ-POSTCODE          TO INSURED-POSTCODE
+     MOVE REQ-INSURED-DOB       TO INSURED-DOB
+     MOVE REQ-RISK-DETAIL       TO POL-RISK-DETAIL
+     MOVE 'A'                   TO POL-BILL-FREQ
+     MOVE REQ-LINE-CODE         TO RATE-LINE-CODE
+     MOVE REQ-REGION            TO RATE-REGION
+     MOVE REQ-EFFECTIVE-DATE    TO RATE-BILL-DATE
+     MOVE 'N'                   TO RATE-REFER-FLAG.
+ 3000-RATE.
+     STRING 'RAT' REQ-LINE-CODE '01' DELIMITED BY SIZE
+         INTO WS-RATING-PGM
+     EXEC CICS LINK PROGRAM(WS-RATING-PGM)
+               COMMAREA(POL-RECORD) LENGTH(400)
+               NOHANDLE
+     END-EXEC
+     CALL WS-RATING-PGM USING POL-RECORD RATE-RECORD
+         ON EXCEPTION
+             MOVE 90 TO RSP-RETURN-CODE
+             MOVE 'NO RATING PROGRAM FOR LINE' TO RSP-MESSAGE
+     END-CALL
+     IF RSP-RETURN-CODE = ZERO
+         CALL 'PRMRULES' USING POL-RECORD RATE-RECORD
+         PERFORM 3100-APPLY-EXCESS
+         COMPUTE RATE-NET-PREMIUM ROUNDED =
+             RATE-BASE-PREMIUM + RATE-LOADINGS - RATE-DISCOUNTS
+         CALL 'IPTCALC' USING RATE-LINE-CODE RATE-REGION
+                              RATE-NET-PREMIUM RATE-IPT-RATE
+                              RATE-IPT-AMT
+         MOVE RATE-BASE-PREMIUM TO RSP-BASE-PREMIUM
+         MOVE RATE-LOADINGS     TO RSP-LOADINGS
+         MOVE RATE-DISCOUNTS    TO RSP-DISCOUNTS
+         MOVE RATE-IPT-AMT      TO RSP-IPT-AMT
+         COMPUTE RSP-TOTAL-PREMIUM = RATE-NET-PREMIUM
+                                   + RATE-IPT-AMT
+         MOVE RATE-REFER-FLAG   TO RSP-REFER-FLAG
+         IF RATE-REFER
+             MOVE 08 TO RSP-RETURN-CODE
+             MOVE 'REFER TO UNDERWRITER' TO RSP-MESSAGE
+         END-IF
+     END-IF.
+ 3100-APPLY-EXCESS.
+*    COPIED FROM PRMCALC 3000-APPLY-EXCESS (2017). KEEP IN STEP.
+     MOVE WS-COMPULSORY-EXCESS TO RATE-EXCESS-COMPULSORY
+     COMPUTE RSP-EXCESS-TOTAL = WS-COMPULSORY-EXCESS
+                              + REQ-VOLUNTARY-XS
+     COMPUTE WS-VOL-DISC-PCT = (REQ-VOLUNTARY-XS / 100) * 5
+     IF WS-VOL-DISC-PCT > 20
+         MOVE 20 TO WS-VOL-DISC-PCT
+     END-IF
+     COMPUTE WS-EXCESS-DISCOUNT ROUNDED =
+         RATE-BASE-PREMIUM * WS-VOL-DISC-PCT / 100
+     ADD WS-EXCESS-DISCOUNT TO RATE-DISCOUNTS.
+""")
+
+cbl("mainframe/cobol/CLMPURGE.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. CLMPURGE.
+ AUTHOR. CORVANE CLAIMS SYSTEMS.
+*================================================================
+* CLMPURGE CLAIMS MASTER PURGE
+*
+* DELETES CLOSED CLAIMS FROM CORV.CLMMAST WHEN THE CLOSED DATE IS
+* MORE THAN 6 YEARS BEFORE THE RUN DATE.
+*
+* STATUS: NOT SCHEDULED. NO JCL IN THIS LIBRARY RUNS CLMPURGE.
+* IT WAS TAKEN OUT OF CLMDAILY IN THE 2024 CLAIMS MIGRATION, WHEN
+* POSTGRES claims.purge_expired_claims() TOOK OVER RETENTION (THAT
+* FUNCTION USES 7 YEARS). THE 6-YEAR FIGURE HERE IS THE OLD RULE;
+* THE PUBLIC PRIVACY PAGE STILL QUOTES IT.
+* NOTA: NO BORRAR ESTE PROGRAMA HASTA QUE AUDITORIA LO APRUEBE.
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT CLMMAST ASSIGN TO CLMMAST
+         ORGANIZATION IS INDEXED
+         ACCESS MODE IS SEQUENTIAL
+         RECORD KEY IS CLM-NUMBER
+         FILE STATUS IS WS-CLMMAST-FS.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  CLMMAST.
+     COPY CLMREC.
+ WORKING-STORAGE SECTION.
+ 01  WS-CLMMAST-FS               PIC X(02).
+ 01  WS-EOF-SW                   PIC X(01) VALUE 'N'.
+     88  WS-EOF                  VALUE 'Y'.
+ 01  WS-RETENTION-YEARS          PIC 9(02) VALUE 06.
+ 01  WS-RUN-DATE                 PIC 9(08).
+ 01  WS-CUTOFF-DATE              PIC 9(08).
+ 01  WS-DELETED-CNT              PIC 9(09) COMP VALUE ZERO.
+ 01  WS-EDIT-CNT                 PIC Z(8)9.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     ACCEPT WS-RUN-DATE FROM DATE YYYYMMDD
+     COMPUTE WS-CUTOFF-DATE =
+         WS-RUN-DATE - (WS-RETENTION-YEARS * 10000)
+     OPEN I-O CLMMAST
+     PERFORM 8000-READ
+     PERFORM UNTIL WS-EOF
+         IF CLM-CLOSED AND CLM-CLOSED-DATE < WS-CUTOFF-DATE
+             DELETE CLMMAST RECORD
+             ADD 1 TO WS-DELETED-CNT
+         END-IF
+         PERFORM 8000-READ
+     END-PERFORM
+     CLOSE CLMMAST
+     MOVE WS-DELETED-CNT TO WS-EDIT-CNT
+     DISPLAY 'CLMPURGE CLAIMS DELETED ' WS-EDIT-CNT
+     GOBACK.
+ 8000-READ.
+     READ CLMMAST NEXT RECORD
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+""")
+
+cbl("mainframe/cobol/IPTCALC.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. IPTCALC.
+ AUTHOR. CORVANE MAINFRAME BILLING.
+*================================================================
+* IPTCALC  INSURANCE PREMIUM TAX
+*
+* CALLED BY PRMCALC AND PRMCALC0.
+*   UK STANDARD RATE 12%.
+*   UK HIGHER RATE 20% FOR TRAVEL (TRV) AND GADGET (GDG).
+*   US POLICIES: NO IPT HERE. STATE PREMIUM TAX IS BILLED BY THE
+*   US FRONTING CARRIER, NOT BY CORVANE.
+* MARINE CARGO (MAR) IS EXEMPT IN THE UK.
+* KEEP IN STEP WITH policy-admin QuoteService AND
+* data/reference/ipt_rates.csv.
+*================================================================
+ DATA DIVISION.
+ WORKING-STORAGE SECTION.
+ 01  WS-IPT-STANDARD             PIC 9V9999 VALUE 0.1200.
+ 01  WS-IPT-HIGHER               PIC 9V9999 VALUE 0.2000.
+ LINKAGE SECTION.
+ 01  LK-LINE-CODE                PIC X(03).
+ 01  LK-REGION                   PIC X(02).
+ 01  LK-NET-PREMIUM              PIC S9(09)V99 COMP-3.
+ 01  LK-IPT-RATE                 PIC 9V9999 COMP-3.
+ 01  LK-IPT-AMT                  PIC S9(07)V99 COMP-3.
+ PROCEDURE DIVISION USING LK-LINE-CODE LK-REGION LK-NET-PREMIUM
+                          LK-IPT-RATE LK-IPT-AMT.
+ 0000-MAIN.
+     EVALUATE TRUE
+         WHEN LK-REGION NOT = 'UK'
+             MOVE ZERO TO LK-IPT-RATE
+         WHEN LK-LINE-CODE = 'MAR'
+             MOVE ZERO TO LK-IPT-RATE
+         WHEN LK-LINE-CODE = 'TRV' OR LK-LINE-CODE = 'GDG'
+             MOVE WS-IPT-HIGHER TO LK-IPT-RATE
+         WHEN OTHER
+             MOVE WS-IPT-STANDARD TO LK-IPT-RATE
+     END-EVALUATE
+     COMPUTE LK-IPT-AMT ROUNDED = LK-NET-PREMIUM * LK-IPT-RATE
+     GOBACK.
+""")
+
+cbl("mainframe/cobol/DATEUTL.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. DATEUTL.
+ AUTHOR. CORVANE MAINFRAME SHARED.
+*================================================================
+* DATEUTL  DATE UTILITIES (CALLED BY PRMEXTR AND CLMHIST)
+*   FUNCTION 'V'  VALIDATE DU-DATE-1 (CCYYMMDD)
+*   FUNCTION 'A'  DU-DATE-2 = DU-DATE-1 + DU-DAYS
+*   FUNCTION 'D'  DU-DAYS   = DU-DATE-2 - DU-DATE-1
+*   FUNCTION 'M'  DU-DATE-2 = DU-DATE-1 MINUS DU-DAYS MONTHS
+* DU-RC: 00 OK, 08 INVALID DATE, 12 UNKNOWN FUNCTION.
+*================================================================
+ DATA DIVISION.
+ WORKING-STORAGE SECTION.
+ 01  WS-INT-1                    PIC S9(09) COMP.
+ 01  WS-INT-2                    PIC S9(09) COMP.
+ 01  WS-DATE-X.
+     05  WS-CCYY                 PIC 9(04).
+     05  WS-MM                   PIC 9(02).
+     05  WS-DD                   PIC 9(02).
+ 01  WS-DATE-N REDEFINES WS-DATE-X PIC 9(08).
+ 01  WS-MONTHS                   PIC S9(05) COMP.
+ LINKAGE SECTION.
+ 01  DU-PARMS.
+     05  DU-FUNCTION             PIC X(01).
+     05  DU-DATE-1               PIC 9(08).
+     05  DU-DATE-2               PIC 9(08).
+     05  DU-DAYS                 PIC S9(07) COMP-3.
+     05  DU-RC                   PIC 9(02).
+ PROCEDURE DIVISION USING DU-PARMS.
+ 0000-MAIN.
+     MOVE ZERO TO DU-RC
+     EVALUATE DU-FUNCTION
+         WHEN 'V'
+             PERFORM 1000-VALIDATE
+         WHEN 'A'
+             PERFORM 1000-VALIDATE
+             IF DU-RC = ZERO
+                 COMPUTE WS-INT-1 =
+                     FUNCTION INTEGER-OF-DATE(DU-DATE-1) + DU-DAYS
+                 COMPUTE DU-DATE-2 =
+                     FUNCTION DATE-OF-INTEGER(WS-INT-1)
+             END-IF
+         WHEN 'D'
+             COMPUTE WS-INT-1 =
+                 FUNCTION INTEGER-OF-DATE(DU-DATE-1)
+             COMPUTE WS-INT-2 =
+                 FUNCTION INTEGER-OF-DATE(DU-DATE-2)
+             COMPUTE DU-DAYS = WS-INT-2 - WS-INT-1
+         WHEN 'M'
+             MOVE DU-DATE-1 TO WS-DATE-N
+             COMPUTE WS-MONTHS =
+                 WS-CCYY * 12 + WS-MM - 1 - DU-DAYS
+             COMPUTE WS-CCYY = WS-MONTHS / 12
+             COMPUTE WS-MM = FUNCTION MOD(WS-MONTHS, 12) + 1
+             IF WS-DD > 28
+                 MOVE 28 TO WS-DD
+             END-IF
+             MOVE WS-DATE-N TO DU-DATE-2
+         WHEN OTHER
+             MOVE 12 TO DU-RC
+     END-EVALUATE
+     GOBACK.
+ 1000-VALIDATE.
+     IF FUNCTION TEST-DATE-YYYYMMDD(DU-DATE-1) NOT = ZERO
+         MOVE 08 TO DU-RC
+     END-IF.
+""")
+
+cbl("mainframe/cobol/CLMFEED.cbl", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. CLMFEED.
+ AUTHOR. CORVANE CLAIMS SYSTEMS.
+*================================================================
+* CLMFEED  CLAIMS MASTER FEED FROM POSTGRES       CLMDAILY STEP005
+*
+* SINCE THE 2024 MIGRATION THE SYSTEM OF RECORD FOR CLAIMS IS
+* POSTGRES claimsdb (claims.claim). THE CICS INQUIRY CLMI STILL
+* READS VSAM CORV.CLMMAST, SO THIS PROGRAM APPLIES THE DAY'S
+* CHANGES TO CLMMAST FROM CORV.CLM.FEED, AN UNLOAD OF VIEW
+* claims.v_claim_mainframe_feed (CHANGES IN THE LAST 2 DAYS).
+* THE UNLOAD AND THE SFTP PUSH TO CORV.CLM.FEED ARE DONE BY A
+* claims-platform JOB "claims-mainframe-feed"; ITS SOURCE IS NOT
+* IN THIS LIBRARY.
+* FEED RECORD = CLMREC LAYOUT. NAME, PHONE AND DESCRIPTION ARE
+* NOT IN THE FEED: THEY STAY AS THEY WERE AT MIGRATION, SO CLMI
+* SHOWS A STALE CLAIMANT NAME FOR CLAIMS OPENED AFTER 2024.
+* EXISTING KEY -> REWRITE, NEW KEY -> WRITE. NOTHING IS DELETED.
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT FEED-FILE ASSIGN TO CLMFEED
+         FILE STATUS IS WS-FEED-FS.
+     SELECT CLMMAST ASSIGN TO CLMMAST
+         ORGANIZATION IS INDEXED
+         ACCESS MODE IS RANDOM
+         RECORD KEY IS CLM-NUMBER
+         FILE STATUS IS WS-CLMMAST-FS.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  FEED-FILE
+     RECORDING MODE IS F.
+ 01  FEED-REC.
+     05  FEED-NUMBER             PIC X(14).
+     05  FEED-POL-NUMBER         PIC X(12).
+     05  FEED-LINE-CODE          PIC X(03).
+     05  FEED-STATUS             PIC X(03).
+     05  FEED-LOSS-DATE          PIC 9(08).
+     05  FEED-CLOSED-DATE        PIC 9(08).
+     05  FEED-RESERVE-AMT        PIC 9(09)V99.
+     05  FEED-PAID-AMT           PIC 9(09)V99.
+     05  FEED-FRAUD-SCORE        PIC 9V999.
+     05  FEED-ADJUSTER-ID        PIC X(08).
+ FD  CLMMAST.
+     COPY CLMREC.
+ WORKING-STORAGE SECTION.
+ 01  WS-FEED-FS                  PIC X(02).
+ 01  WS-CLMMAST-FS               PIC X(02).
+ 01  WS-EOF-SW                   PIC X(01) VALUE 'N'.
+     88  WS-EOF                  VALUE 'Y'.
+ 01  WS-COUNTS.
+     05  WS-READ-CNT             PIC 9(09) COMP VALUE ZERO.
+     05  WS-NEW-CNT              PIC 9(09) COMP VALUE ZERO.
+     05  WS-UPD-CNT              PIC 9(09) COMP VALUE ZERO.
+     05  WS-ERR-CNT              PIC 9(09) COMP VALUE ZERO.
+ 01  WS-EDIT-CNT                 PIC Z(8)9.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     OPEN INPUT FEED-FILE I-O CLMMAST
+     PERFORM 8000-READ-FEED
+     PERFORM 2000-APPLY UNTIL WS-EOF
+     CLOSE FEED-FILE CLMMAST
+     MOVE WS-READ-CNT TO WS-EDIT-CNT
+     DISPLAY 'CLMFEED RECORDS READ    ' WS-EDIT-CNT
+     MOVE WS-NEW-CNT TO WS-EDIT-CNT
+     DISPLAY 'CLMFEED CLAIMS ADDED    ' WS-EDIT-CNT
+     MOVE WS-UPD-CNT TO WS-EDIT-CNT
+     DISPLAY 'CLMFEED CLAIMS UPDATED  ' WS-EDIT-CNT
+     IF WS-ERR-CNT > ZERO
+         MOVE 8 TO RETURN-CODE
+     END-IF
+     GOBACK.
+ 2000-APPLY.
+     ADD 1 TO WS-READ-CNT
+     MOVE FEED-NUMBER TO CLM-NUMBER
+     READ CLMMAST
+         INVALID KEY
+             INITIALIZE CLM-RECORD
+             MOVE FEED-NUMBER TO CLM-NUMBER
+             PERFORM 2100-MOVE-FIELDS
+             WRITE CLM-RECORD
+                 INVALID KEY ADD 1 TO WS-ERR-CNT
+                 NOT INVALID KEY ADD 1 TO WS-NEW-CNT
+             END-WRITE
+         NOT INVALID KEY
+             PERFORM 2100-MOVE-FIELDS
+             REWRITE CLM-RECORD
+                 INVALID KEY ADD 1 TO WS-ERR-CNT
+                 NOT INVALID KEY ADD 1 TO WS-UPD-CNT
+             END-REWRITE
+     END-READ
+     PERFORM 8000-READ-FEED.
+ 2100-MOVE-FIELDS.
+     MOVE FEED-POL-NUMBER   TO CLM-POL-NUMBER
+     MOVE FEED-LINE-CODE    TO CLM-LINE-CODE
+     MOVE FEED-STATUS       TO CLM-STATUS
+     MOVE FEED-LOSS-DATE    TO CLM-LOSS-DATE
+     MOVE FEED-CLOSED-DATE  TO CLM-CLOSED-DATE
+     MOVE FEED-RESERVE-AMT  TO CLM-RESERVE-AMT
+     MOVE FEED-PAID-AMT     TO CLM-PAID-AMT
+     MOVE FEED-FRAUD-SCORE  TO CLM-FRAUD-SCORE
+     MOVE FEED-ADJUSTER-ID  TO CLM-ADJUSTER-ID.
+ 8000-READ-FEED.
+     READ FEED-FILE
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+""")
+
+# CLMHIST: EBCDIC (cp037) source
+clmhist = cobol("CLMHIST", r"""
+ IDENTIFICATION DIVISION.
+ PROGRAM-ID. CLMHIST.
+ AUTHOR. CORVANE CLAIMS SYSTEMS.
+*================================================================
+* CLMHIST  CLAIMS HISTORY EXTRACT                CLMDAILY STEP020
+*
+* THIS MEMBER IS STORED IN EBCDIC (CODE PAGE 037) EXACTLY AS IT
+* WAS DOWNLOADED FROM CORV.PROD.COBOL. SEE README-ebcdic.txt.
+*
+* READS CORV.CLMMAST (CLMREC) AND WRITES EVERY CLAIM CLOSED IN THE
+* LAST 13 MONTHS (CLMPARM01 HISTORY-MONTHS=13) TO
+* CORV.CLM.HISTORY(+1). FINANCE USES THE FILE FOR LOSS-RATIO
+* REPORTING. CLAIMANT NAME AND PHONE ARE BLANKED (MASKED) ON THE
+* WAY OUT; THE CLAIM DESCRIPTION IS NOT, AND CAN HOLD PERSONAL
+* DATA TYPED BY THE CLAIMANT.
+*================================================================
+ ENVIRONMENT DIVISION.
+ INPUT-OUTPUT SECTION.
+ FILE-CONTROL.
+     SELECT CLMMAST ASSIGN TO CLMMAST
+         ORGANIZATION IS INDEXED
+         ACCESS MODE IS SEQUENTIAL
+         RECORD KEY IS CLM-NUMBER
+         FILE STATUS IS WS-CLMMAST-FS.
+     SELECT HIST-FILE ASSIGN TO CLMHIST.
+     SELECT PARM-FILE ASSIGN TO PARMIN.
+ DATA DIVISION.
+ FILE SECTION.
+ FD  CLMMAST.
+     COPY CLMREC.
+ FD  HIST-FILE
+     RECORDING MODE IS F.
+ 01  HIST-REC                    PIC X(300).
+ FD  PARM-FILE.
+ 01  PARM-CARD                   PIC X(80).
+ WORKING-STORAGE SECTION.
+ 01  WS-CLMMAST-FS               PIC X(02).
+ 01  WS-EOF-SW                   PIC X(01) VALUE 'N'.
+     88  WS-EOF                  VALUE 'Y'.
+ 01  WS-HISTORY-MONTHS           PIC 9(03) VALUE 13.
+ 01  WS-DATE-PARMS.
+     05  WS-DU-FUNCTION          PIC X(01).
+     05  WS-DU-DATE-1            PIC 9(08).
+     05  WS-DU-DATE-2            PIC 9(08).
+     05  WS-DU-DAYS              PIC S9(07) COMP-3.
+     05  WS-DU-RC                PIC 9(02).
+ 01  WS-FROM-DATE                PIC 9(08).
+ 01  WS-WRITTEN-CNT              PIC 9(09) COMP VALUE ZERO.
+ 01  WS-EDIT-CNT                 PIC Z(8)9.
+ PROCEDURE DIVISION.
+ 0000-MAIN.
+     OPEN INPUT CLMMAST PARM-FILE OUTPUT HIST-FILE
+     READ PARM-FILE
+         NOT AT END
+             IF PARM-CARD(1:15) = 'HISTORY-MONTHS='
+                 MOVE PARM-CARD(16:3) TO WS-HISTORY-MONTHS
+             END-IF
+     END-READ
+     ACCEPT WS-DU-DATE-1 FROM DATE YYYYMMDD
+     MOVE 'M' TO WS-DU-FUNCTION
+     MOVE WS-HISTORY-MONTHS TO WS-DU-DAYS
+     CALL 'DATEUTL' USING WS-DATE-PARMS
+     MOVE WS-DU-DATE-2 TO WS-FROM-DATE
+     PERFORM 8000-READ
+     PERFORM UNTIL WS-EOF
+         IF CLM-CLOSED AND CLM-CLOSED-DATE >= WS-FROM-DATE
+             MOVE SPACES TO CLM-CLAIMANT-NAME CLM-CLAIMANT-PHONE
+             WRITE HIST-REC FROM CLM-RECORD
+             ADD 1 TO WS-WRITTEN-CNT
+         END-IF
+         PERFORM 8000-READ
+     END-PERFORM
+     CLOSE CLMMAST PARM-FILE HIST-FILE
+     MOVE WS-WRITTEN-CNT TO WS-EDIT-CNT
+     DISPLAY 'CLMHIST CLAIMS WRITTEN ' WS-EDIT-CNT
+     GOBACK.
+ 8000-READ.
+     READ CLMMAST NEXT RECORD
+         AT END SET WS-EOF TO TRUE
+     END-READ.
+""")
+p = os.path.join(ROOT, "mainframe/ebcdic/CLMHIST.cbl")
+os.makedirs(os.path.dirname(p), exist_ok=True)
+with open(p, "wb") as f:
+    f.write(clmhist.encode("cp037"))
+
+write("mainframe/ebcdic/README-ebcdic.txt", """CLMHIST.cbl in this folder is EBCDIC, not UTF-8.
+
+It is a byte-for-byte download of member CLMHIST from CORV.PROD.COBOL, taken with a
+binary FTP transfer, so it is still in IBM code page 037. Line breaks are the EBCDIC
+line-feed byte X'25' that the download tool inserted after each 80-byte card image.
+Opened as UTF-8 it looks like noise; decoded with cp037 it is an ordinary COBOL program.
+
+Program: CLMHIST, claims history extract, run by JCL CLMDAILY step STEP020.
+Reads CORV.CLMMAST (copybook CLMREC), writes CORV.CLM.HISTORY(+1).
+History window: CLMPARM01 HISTORY-MONTHS=13.
+
+Every other file under mainframe/ was converted to UTF-8 when it was checked in.
+""")
+
+# ---------------------------------------------------------------- JCL
+write("mainframe/jcl/PRMNIGHT.jcl", r"""//PRMNIGHT JOB (CORV,BILL),'NIGHTLY PREMIUM',CLASS=A,MSGCLASS=X,
+//             MSGLEVEL=(1,1),NOTIFY=&SYSUID
+//*================================================================
+//* PRMNIGHT  NIGHTLY PREMIUM BILLING - SYSTEM CORVMF
+//* SCHEDULE: 01:30 EUROPE/LONDON, MONDAY TO SATURDAY.
+//*           OWNED BY TEAM-MAINFRAME (@corvane/mainframe-billing).
+//* STEP010 PRMEXTR  POLICIES DUE FOR BILLING  POLMAST -> EXTRACT
+//* STEP020 PRMCALC  RATE, EXCESS, IPT          EXTRACT -> RATED
+//* STEP030 PRMBILL  DAILY BILLING FILE         RATED -> BILLING
+//* STEP040 SFTP     BILLING FILE TO THE WAREHOUSE LANDING ZONE
+//*                  /landing/billing/ (AIRFLOW DAG
+//*                  premium_billing_load PICKS IT UP AT 04:00).
+//*                  THE SFTP SCRIPT CONVERTS EBCDIC TO ASCII.
+//* RESTART: FROM THE FAILED STEP. STEP030 USES A NEW GDG
+//*          GENERATION, SO DELETE THE (+1) BEFORE RESTARTING IT.
+//*================================================================
+//JOBLIB   DD DSN=CORV.PROD.LOADLIB,DISP=SHR
+//*
+//STEP010  EXEC PGM=PRMEXTR
+//POLMAST  DD DSN=CORV.POLMAST,DISP=SHR
+//PARMIN   DD DSN=CORV.PARMLIB(PRMPARM01),DISP=SHR
+//LINESIN  DD DSN=CORV.PARMLIB(PRMPARM02),DISP=SHR
+//EXTRACT  DD DSN=CORV.PRM.EXTRACT,DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(50,10),RLSE),
+//            DCB=(RECFM=FB,LRECL=400,BLKSIZE=27600)
+//SYSOUT   DD SYSOUT=*
+//*
+//STEP020  EXEC PGM=PRMCALC,COND=(4,LT)
+//EXTRACT  DD DSN=CORV.PRM.EXTRACT,DISP=(OLD,DELETE,KEEP)
+//PARMIN   DD DSN=CORV.PARMLIB(PRMPARM01),DISP=SHR
+//RATED    DD DSN=CORV.PRM.RATED,DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(20,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=120,BLKSIZE=27960)
+//SYSOUT   DD SYSOUT=*
+//*
+//STEP030  EXEC PGM=PRMBILL,COND=(4,LT)
+//RATED    DD DSN=CORV.PRM.RATED,DISP=(OLD,DELETE,KEEP)
+//BILLING  DD DSN=CORV.PRM.BILLING.DAILY(+1),
+//            DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(10,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=64,BLKSIZE=27968)
+//REJECTS  DD SYSOUT=*
+//REFERRAL DD SYSOUT=(R,,UWRF)
+//SYSOUT   DD SYSOUT=*
+//*
+//STEP040  EXEC PGM=BPXBATCH,COND=(4,LT)
+//STDPARM  DD *
+SH /u/corvbill/scripts/sftp_billing.sh
+   'CORV.PRM.BILLING.DAILY(0)'
+   sftp-landing.corvane.internal:/landing/billing/
+/*
+//STDOUT   DD SYSOUT=*
+//STDERR   DD SYSOUT=*
+""")
+
+clmdaily = """//CLMDAILY JOB (CORV,CLMS),'CLAIMS DAILY',CLASS=A,MSGCLASS=X,
+//             NOTIFY=&SYSUID
+//*================================================================
+//* CLMDAILY  CLAIMS DAILY HOUSEKEEPING - SYSTEM CORVMF
+//*\tSCHEDULE: 22:00 EUROPE/LONDON, EVERY DAY.
+//*\tSTEP005 CLMFEED APPLIES THE DAY'S POSTGRES CHANGES TO CLMMAST
+//*\tSTEP010 BACKUP OF CORV.CLMMAST (IDCAMS REPRO)
+//*\tSTEP020 CLMHIST CLAIMS HISTORY FOR FINANCE (13 MONTHS)
+//*\tCLMPURGE WAS STEP030 UNTIL THE 2024 MIGRATION. IT IS NOT RUN
+//*\tANY MORE: claims.purge_expired_claims() IN POSTGRES OWNS
+//*\tRETENTION NOW.
+//*\tTHIS MEMBER WAS EDITED ON A PC AND HAS CRLF LINE ENDINGS AND
+//*\tTAB CHARACTERS IN THE COMMENTS.
+//*================================================================
+//JOBLIB   DD DSN=CORV.PROD.LOADLIB,DISP=SHR
+//*
+//STEP005  EXEC PGM=CLMFEED
+//CLMFEED  DD DSN=CORV.CLM.FEED,DISP=(OLD,DELETE,KEEP)
+//CLMMAST  DD DSN=CORV.CLMMAST,DISP=OLD
+//SYSOUT   DD SYSOUT=*
+//*
+//STEP010  EXEC PGM=IDCAMS,COND=(4,LT)
+//SYSPRINT DD SYSOUT=*
+//BACKUP   DD DSN=CORV.CLMMAST.BACKUP(+1),DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(30,10),RLSE),
+//            DCB=(RECFM=FB,LRECL=300,BLKSIZE=27900)
+//SYSIN    DD *
+  REPRO INFILE(CLMMAST) OUTFILE(BACKUP)
+/*
+//CLMMAST  DD DSN=CORV.CLMMAST,DISP=SHR
+//*
+//STEP020  EXEC PGM=CLMHIST,COND=(0,LT)
+//CLMMAST  DD DSN=CORV.CLMMAST,DISP=SHR
+//PARMIN   DD DSN=CORV.PARMLIB(CLMPARM01),DISP=SHR
+//CLMHIST  DD DSN=CORV.CLM.HISTORY(+1),DISP=(NEW,CATLG,DELETE),
+//            SPACE=(CYL,(10,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=300,BLKSIZE=27900)
+//SYSOUT   DD SYSOUT=*
+"""
+write("mainframe/jcl/CLMDAILY.jcl", clmdaily, newline="\r\n")
+
+write("mainframe/jcl/PRMMONTH.jcl", r"""//PRMMONTH JOB (CORV,BILL),'MONTHLY IPT RECON',CLASS=B,MSGCLASS=X,
+//             NOTIFY=&SYSUID
+//*================================================================
+//* PRMMONTH  MONTHLY INSURANCE PREMIUM TAX RECONCILIATION
+//* SCHEDULE: 1ST WORKING DAY OF THE MONTH, 06:00 EUROPE/LONDON.
+//* STEP010 SORT  SUMS THE MONTH'S BILLING GENERATIONS BY LINE AND
+//*               REGION (BILLREC OFFSETS: LINE 13-15, REGION 47-48,
+//*               PREMIUM 24-34, IPT 35-43, ZONED DECIMAL).
+//* STEP020 COPY  THE SUMMARY TO FINANCE (CORV.FIN.IPT.MONTHLY).
+//* THE WAREHOUSE VIEW dw.v_premium_by_line SHOULD AGREE WITH THIS
+//* SUMMARY FOR UK LINES; FINANCE CHECKS BOTH EACH MONTH.
+//*================================================================
+//STEP010  EXEC PGM=SORT
+//SYSOUT   DD SYSOUT=*
+//SORTIN   DD DSN=CORV.PRM.BILLING.DAILY,DISP=SHR
+//SORTOUT  DD DSN=&&IPTSUM,DISP=(NEW,PASS),
+//            SPACE=(TRK,(5,5)),
+//            DCB=(RECFM=FB,LRECL=64,BLKSIZE=27968)
+//SYSIN    DD *
+  SORT FIELDS=(13,3,CH,A,47,2,CH,A)
+  SUM FIELDS=(24,11,ZD,35,9,ZD)
+/*
+//STEP020  EXEC PGM=IEBGENER,COND=(0,LT)
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD DUMMY
+//SYSUT1   DD DSN=&&IPTSUM,DISP=(OLD,DELETE)
+//SYSUT2   DD DSN=CORV.FIN.IPT.MONTHLY(+1),
+//            DISP=(NEW,CATLG,DELETE),
+//            SPACE=(TRK,(5,5),RLSE),
+//            DCB=(RECFM=FB,LRECL=64,BLKSIZE=27968)
+""")
+
+# ---------------------------------------------------------------- CICS
+write("mainframe/cics/CLMINQS.bms", r"""*=================================================================
+* CLMINQS  MAPSET FOR TRANSACTION CLMI (PROGRAM CLMINQ0)
+*          MAP CLMINQM - CLAIMS INQUIRY, 24 X 80
+*          FRAUD IS SHOWN BRIGHT WHEN THE SCORE IS ABOVE 0.720.
+*=================================================================
+CLMINQS  DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,CTRL=FREEKB,     X
+               STORAGE=AUTO,TIOAPFX=YES
+CLMINQM  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+         DFHMDF POS=(1,2),LENGTH=30,ATTRB=(ASKIP,BRT),                X
+               INITIAL='CORVANE MUTUAL - CLAIMS INQUIRY'
+         DFHMDF POS=(1,70),LENGTH=4,ATTRB=ASKIP,INITIAL='CLMI'
+         DFHMDF POS=(3,2),LENGTH=13,ATTRB=ASKIP,INITIAL='CLAIM NUMBER:'
+CLMNO    DFHMDF POS=(3,16),LENGTH=14,ATTRB=(UNPROT,IC,FSET)
+         DFHMDF POS=(3,31),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(5,2),LENGTH=13,ATTRB=ASKIP,INITIAL='POLICY:'
+POLNO    DFHMDF POS=(5,16),LENGTH=12,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(6,2),LENGTH=13,ATTRB=ASKIP,INITIAL='STATUS:'
+STAT     DFHMDF POS=(6,16),LENGTH=3,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(7,2),LENGTH=13,ATTRB=ASKIP,INITIAL='LOSS DATE:'
+LOSSDT   DFHMDF POS=(7,16),LENGTH=10,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(8,2),LENGTH=13,ATTRB=ASKIP,INITIAL='CAUSE:'
+CAUSE    DFHMDF POS=(8,16),LENGTH=6,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(9,2),LENGTH=13,ATTRB=ASKIP,INITIAL='RESERVE:'
+RESV     DFHMDF POS=(9,16),LENGTH=14,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(10,2),LENGTH=13,ATTRB=ASKIP,INITIAL='PAID:'
+PAID     DFHMDF POS=(10,16),LENGTH=14,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(11,2),LENGTH=13,ATTRB=ASKIP,INITIAL='FRAUD SCORE:'
+FRAUD    DFHMDF POS=(11,16),LENGTH=5,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(12,2),LENGTH=13,ATTRB=ASKIP,INITIAL='ADJUSTER:'
+ADJ      DFHMDF POS=(12,16),LENGTH=8,ATTRB=(ASKIP,NORM)
+         DFHMDF POS=(13,2),LENGTH=13,ATTRB=ASKIP,INITIAL='CLAIMANT:'
+CLMT     DFHMDF POS=(13,16),LENGTH=40,ATTRB=(ASKIP,NORM)
+MSG      DFHMDF POS=(22,2),LENGTH=60,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(24,2),LENGTH=30,ATTRB=ASKIP,                     X
+               INITIAL='ENTER=INQUIRE  PF3=EXIT'
+         DFHMSD TYPE=FINAL
+         END
+""")
+
+write("mainframe/cics/PRMQS.bms", r"""*=================================================================
+* PRMQS    MAPSET FOR TRANSACTION PRMQ (PROGRAM PRMQ000)
+*          MAP PRMQM - BRANCH PREMIUM QUOTE SCREEN, 24 X 80
+* NOTE: THE SOURCE OF PRMQ000 IS NOT IN THIS LIBRARY. IT WAS LOST
+* IN THE 2016 LIBRARY MIGRATION; ONLY THE LOAD MODULE EXISTS.
+* BRANCH STAFF STILL USE PRMQ FOR PHONE QUOTES ON MARINE CARGO.
+*=================================================================
+PRMQS    DFHMSD TYPE=&SYSPARM,MODE=INOUT,LANG=COBOL,CTRL=FREEKB,     X
+               STORAGE=AUTO,TIOAPFX=YES
+PRMQM    DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+         DFHMDF POS=(1,2),LENGTH=28,ATTRB=(ASKIP,BRT),                X
+               INITIAL='CORVANE MUTUAL - PHONE QUOTE'
+         DFHMDF POS=(3,2),LENGTH=10,ATTRB=ASKIP,INITIAL='LINE:'
+LINE     DFHMDF POS=(3,13),LENGTH=3,ATTRB=(UNPROT,IC,FSET)
+         DFHMDF POS=(3,17),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(4,2),LENGTH=10,ATTRB=ASKIP,INITIAL='REGION:'
+REGN     DFHMDF POS=(4,13),LENGTH=2,ATTRB=(UNPROT,FSET)
+         DFHMDF POS=(4,16),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(5,2),LENGTH=10,ATTRB=ASKIP,INITIAL='SUM INS:'
+SUMINS   DFHMDF POS=(5,13),LENGTH=13,ATTRB=(UNPROT,NUM,FSET)
+         DFHMDF POS=(5,27),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(6,2),LENGTH=10,ATTRB=ASKIP,INITIAL='VOL XS:'
+VOLXS    DFHMDF POS=(6,13),LENGTH=5,ATTRB=(UNPROT,NUM,FSET)
+         DFHMDF POS=(6,19),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(7,2),LENGTH=10,ATTRB=ASKIP,INITIAL='POSTCODE:'
+PCODE    DFHMDF POS=(7,13),LENGTH=10,ATTRB=(UNPROT,FSET)
+         DFHMDF POS=(7,24),LENGTH=1,ATTRB=ASKIP
+         DFHMDF POS=(10,2),LENGTH=10,ATTRB=ASKIP,INITIAL='PREMIUM:'
+PREM     DFHMDF POS=(10,13),LENGTH=14,ATTRB=(ASKIP,BRT)
+         DFHMDF POS=(11,2),LENGTH=10,ATTRB=ASKIP,INITIAL='IPT:'
+IPT      DFHMDF POS=(11,13),LENGTH=12,ATTRB=(ASKIP,NORM)
+QMSG     DFHMDF POS=(22,2),LENGTH=60,ATTRB=(ASKIP,BRT)
+         DFHMSD TYPE=FINAL
+         END
+""")
+
+write("mainframe/cics/corvmf.csd", r"""* CORVMF CICS RESOURCE DEFINITIONS (DFHCSDUP INPUT)
+* REGION CORVCICP. GROUPS CORVCLM (CLAIMS) AND CORVPRM (PREMIUM),
+* BOTH IN LIST CORVLIST.
+*
+* ---- CLAIMS INQUIRY (BEING STRANGLED BY claims-service) --------
+DEFINE TRANSACTION(CLMI) GROUP(CORVCLM) PROGRAM(CLMINQ0)
+       DESCRIPTION(CLAIMS INQUIRY - READ ONLY) TASKDATALOC(ANY)
+DEFINE PROGRAM(CLMINQ0) GROUP(CORVCLM) LANGUAGE(COBOL)
+       DATALOCATION(ANY) EXECKEY(USER)
+DEFINE MAPSET(CLMINQS) GROUP(CORVCLM)
+DEFINE FILE(CLMMAST) GROUP(CORVCLM) DSNAME(CORV.CLMMAST)
+       READ(YES) BROWSE(YES) ADD(NO) UPDATE(NO) DELETE(NO)
+       RECORDFORMAT(F) STRINGS(10)
+*
+* ---- PREMIUM: ONLINE RATING FOR policy-admin THROUGH CTG -------
+DEFINE PROGRAM(PRMCALC0) GROUP(CORVPRM) LANGUAGE(COBOL)
+       DESCRIPTION(PREMIUM CALC - CALLED FROM JAVA VIA CORVCTG1)
+       DATALOCATION(ANY) CONCURRENCY(THREADSAFE)
+DEFINE TRANSACTION(PRMC) GROUP(CORVPRM) PROGRAM(DFHMIRS)
+       DESCRIPTION(CTG MIRROR FOR PRMCALC0 CALLS)
+DEFINE IPCONN(CORVCTG1) GROUP(CORVPRM) APPLID(CORVCTG1)
+       TCPIPSERVICE(CORVIPIC) RECEIVECOUNT(50) SENDCOUNT(0)
+       DESCRIPTION(CICS TRANSACTION GATEWAY FOR policy-admin)
+DEFINE TCPIPSERVICE(CORVIPIC) GROUP(CORVPRM) PORTNUMBER(50011)
+       PROTOCOL(IPIC) SSL(YES)
+DEFINE PROGRAM(PRMRULES) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(IPTCALC) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(DATEUTL) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATMTR01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATHOM01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATCNT01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATTRV01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATPET01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATLLD01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATMAR01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATCPR01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATPLB01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATPIN01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATCYB01) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE PROGRAM(RATGDG01) GROUP(CORVPRM) LANGUAGE(COBOL)
+*
+* ---- BRANCH PHONE QUOTE (SOURCE OF PRMQ000 IS LOST) ------------
+DEFINE TRANSACTION(PRMQ) GROUP(CORVPRM) PROGRAM(PRMQ000)
+       DESCRIPTION(BRANCH PHONE QUOTE)
+DEFINE PROGRAM(PRMQ000) GROUP(CORVPRM) LANGUAGE(COBOL)
+DEFINE MAPSET(PRMQS) GROUP(CORVPRM)
+DEFINE FILE(POLMAST) GROUP(CORVPRM) DSNAME(CORV.POLMAST)
+       READ(YES) BROWSE(YES) UPDATE(NO)
+*
+ADD GROUP(CORVCLM) LIST(CORVLIST)
+ADD GROUP(CORVPRM) LIST(CORVLIST)
+""")
+
+# ---------------------------------------------------------------- parms (extensionless)
+write("mainframe/parms/PRMPARM01", """* PRMPARM01 - PRMNIGHT RUN CONTROL (CORV.PARMLIB)
+* KEYWORD=VALUE, ONE PER CARD. READ BY PRMEXTR AND PRMCALC.
+RUNDATE=*TODAY
+IPT-STD=12.00
+IPT-HIGH=20.00
+* EXCESS-COMP CHANGED 200 -> 250 ON 2024-03-04, CHANGE CHG-88412.
+* NOTE: PRMCALC DOES NOT READ THIS CARD (IT ONLY READS RUNDATE=).
+EXCESS-COMP=250
+MIN-PREMIUM=25.00
+REFER-SCORE=850
+""")
+write("mainframe/parms/PRMPARM02", """* PRMPARM02 - LINES OF BUSINESS BILLED BY PRMNIGHT (CORV.PARMLIB)
+* CODE IN COLS 1-3, Y/N IN COL 5. A LINE NOT LISTED IS BILLED.
+* MAR IS BILLED BY THE LLOYD'S BROKER, NOT BY CORVANE (2019).
+MTR Y
+HOM Y
+CNT Y
+TRV Y
+PET Y
+LLD Y
+MAR N
+CPR Y
+PLB Y
+PIN Y
+CYB Y
+""")
+write("mainframe/parms/CLMPARM01", """* CLMPARM01 - CLMDAILY CONTROL (CORV.PARMLIB), READ BY CLMHIST
+HISTORY-MONTHS=013
+* RETENTION-YEARS=06 WAS FOR CLMPURGE, WHICH NO LONGER RUNS.
+RETENTION-YEARS=06
+""")
+
+write("mainframe/README.md", """# CORVMF: Corvane mainframe (billing and claims inquiry)
+
+z/OS batch and CICS. Owned by team-mainframe (`@corvane/mainframe-billing`).
+
+## Batch
+
+| Job | When (Europe/London) | Steps |
+|---|---|---|
+| `PRMNIGHT` | 01:30 Mon–Sat | STEP010 `PRMEXTR` → STEP020 `PRMCALC` → STEP030 `PRMBILL` → STEP040 SFTP to `/landing/billing/` |
+| `CLMDAILY` | 22:00 daily | STEP005 `CLMFEED` (Postgres changes into CLMMAST) → STEP010 backup `CORV.CLMMAST` → STEP020 `CLMHIST` (source is EBCDIC, see `ebcdic/`) |
+| `PRMMONTH` | 1st working day, 06:00 | Monthly IPT summary for finance |
+
+`PRMCALC` calls the rating program for the policy's line dynamically (`RAT` + line code + `01`), then
+`PRMRULES` (the underwriting rule table), applies the excess, and calls `IPTCALC`.
+The billing file (`BILLREC`, 64 bytes) is loaded by the data platform's Airflow DAG `premium_billing_load`.
+
+## Online (CICS region CORVCICP)
+
+| Transaction | Program | Purpose |
+|---|---|---|
+| `CLMI` | `CLMINQ0` | Claims inquiry, read-only. Being replaced by `GET /v1/claims/{id}/summary`. |
+| `PRMC` (CTG mirror) | `PRMCALC0` | Premium calculation for policy-admin, through CTG server `CORVCTG1`. Prod only. |
+| `PRMQ` | `PRMQ000` | Branch phone quote. Source lost in 2016; only the load module exists. |
+
+## Not run
+
+`CLMPURGE` (6-year claims purge) has not been scheduled since the 2024 claims migration.
+""")
+
+# ---------------------------------------------------------------- Postgres
+write("data/postgres/001_claims_schema.sql", """-- claimsdb, schema claims: the system of record for claims since the 2024 migration off CORV.CLMMAST.
+-- Owner: @corvane/claims-platform. PostgreSQL 15.
+-- Writers: claims-service (JPA entities Claim, ClaimParty), payments-gateway (claims.payment),
+-- fraud-scoring (claims.fraud_score), scripts/oneoff/backfill_2023_reserves.py (claims.claim_reserve).
+
+CREATE SCHEMA IF NOT EXISTS claims;
+
+-- ClaimRepository.nextClaimNumber(): claim numbers are 'CLM' || line code || lpad(nextval, 8).
+CREATE SEQUENCE claims.claim_number_seq START WITH 10000001 INCREMENT BY 1 CACHE 20;
+
+CREATE TABLE claims.claim (
+    id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_number        varchar(14)  NOT NULL UNIQUE,
+    policy_number       varchar(12)  NOT NULL,
+    line_code           char(3)      NOT NULL CHECK (line_code IN
+                          ('MTR','HOM','CNT','TRV','PET','LLD','MAR','CPR','PLB','PIN','CYB','GDG')),
+    status              varchar(12)  NOT NULL DEFAULT 'REGISTERED' CHECK (status IN
+                          ('REGISTERED','REFERRED','APPROVED','PAID','CLOSED','DECLINED','REOPENED')),
+    triage_outcome      varchar(20),            -- AUTO_APPROVED, ADJUSTER or REFER_FRAUD (TriageService)
+    incident_date       date         NOT NULL,
+    loss_cause          varchar(6)   NOT NULL,
+    description         text,
+    injury_notes        text,
+    estimated_amount    numeric(12,2) NOT NULL,
+    reserve_amount      numeric(12,2) NOT NULL DEFAULT 0,
+    excess_amount       numeric(9,2)  NOT NULL DEFAULT 0,
+    paid_amount         numeric(12,2) NOT NULL DEFAULT 0,
+    fraud_score         numeric(4,3)  CHECK (fraud_score BETWEEN 0 AND 1),
+    adjuster_id         varchar(8),
+    currency            char(3)      NOT NULL DEFAULT 'GBP',
+    region              char(2)      NOT NULL DEFAULT 'UK' CHECK (region IN ('UK','US')),
+    registered_at       timestamptz  NOT NULL DEFAULT now(),
+    registered_by       varchar(64)  NOT NULL,
+    reported_at         timestamptz  GENERATED ALWAYS AS (registered_at) STORED,  -- old claims-v1 name
+    closed_at           timestamptz,
+    legacy_reserve_text varchar(40),            -- claims-v1 kept reserves as text, e.g. 'GBP 1,250.00'
+    updated_at          timestamptz  NOT NULL DEFAULT now(),
+    version             integer      NOT NULL DEFAULT 0
+);
+COMMENT ON TABLE claims.claim IS 'One row per insurance claim. Retention: 7 years after closed_at, enforced by claims.purge_expired_claims().';
+COMMENT ON COLUMN claims.claim.injury_notes IS 'Personal data (health). Free text typed by the claimant at FNOL; also sent to fraud-scoring.';
+COMMENT ON COLUMN claims.claim.fraud_score IS 'Latest score from fraud-scoring POST /v1/score; history in claims.fraud_score. Refer above 0.72.';
+COMMENT ON COLUMN claims.claim.legacy_reserve_text IS 'Only set on 2023 claims migrated from retired claims-v1. Read once by scripts/oneoff/backfill_2023_reserves.py.';
+
+-- The people on a claim. role = POLICYHOLDER is the same person as PolicyHolder (policy-admin),
+-- INSURED (mainframe POLREC), PARTY (Oracle LEDGER) and Customer (customer-portal).
+CREATE TABLE claims.claim_party (
+    id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_id       uuid NOT NULL REFERENCES claims.claim(id) ON DELETE CASCADE,
+    role           varchar(12) NOT NULL CHECK (role IN ('POLICYHOLDER','THIRD_PARTY','WITNESS','PAYEE')),
+    full_name      varchar(120) NOT NULL,
+    date_of_birth  date,
+    national_id    varchar(11),
+    email          varchar(254),
+    phone          varchar(20),
+    address_line1  varchar(120),
+    town           varchar(60),
+    postcode       varchar(10),
+    country        char(2) NOT NULL DEFAULT 'GB'
+);
+COMMENT ON TABLE claims.claim_party IS 'Personal data: name, date of birth, national_id (UK NI number or US SSN), contact details, address.';
+CREATE INDEX ix_claim_party_claim ON claims.claim_party(claim_id);
+CREATE UNIQUE INDEX ux_claim_party_holder ON claims.claim_party(claim_id) WHERE role = 'POLICYHOLDER';
+
+CREATE TABLE claims.claim_reserve (
+    id            bigserial PRIMARY KEY,
+    claim_id      uuid NOT NULL REFERENCES claims.claim(id) ON DELETE CASCADE,
+    reserve_type  varchar(10) NOT NULL CHECK (reserve_type IN ('INDEMNITY','EXPENSE','RECOVERY')),
+    amount        numeric(12,2) NOT NULL,
+    currency      char(3) NOT NULL DEFAULT 'GBP',
+    reason        varchar(200),
+    set_by        varchar(64) NOT NULL,
+    set_at        timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_claim_reserve_claim ON claims.claim_reserve(claim_id, set_at DESC);
+
+-- Written by fraud-scoring (store.py) for every claims.registered.v1 event; one row per claim, upserted.
+CREATE TABLE claims.fraud_score (
+    claim_id       uuid PRIMARY KEY REFERENCES claims.claim(id) ON DELETE CASCADE,
+    score          numeric(4,3) NOT NULL CHECK (score BETWEEN 0 AND 1),
+    decision       varchar(10) NOT NULL CHECK (decision IN ('CLEAR','REFER','DECLINE')),
+    indicators     jsonb NOT NULL DEFAULT '[]',
+    llm_label      varchar(40),             -- set only when fraud.llm-triage.enabled
+    model_version  varchar(20) NOT NULL,
+    scored_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- Written by payments-gateway (internal/store). idempotency_key = claim id + ':' + approval sequence,
+-- so a redelivered claims.approved.v1 event never pays twice.
+CREATE TABLE claims.payment (
+    id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    idempotency_key   varchar(80) NOT NULL,
+    claim_id          uuid NOT NULL REFERENCES claims.claim(id) ON DELETE CASCADE,
+    amount            numeric(12,2) NOT NULL CHECK (amount > 0),
+    currency          char(3) NOT NULL,
+    status            varchar(10) NOT NULL CHECK (status IN ('PENDING','SENT','SETTLED','FAILED')),
+    provider          varchar(16) NOT NULL DEFAULT 'CLEARRIVER',
+    bank_reference    varchar(40),
+    failure_reason    varchar(200),
+    created_at        timestamptz NOT NULL DEFAULT now(),
+    settled_at        timestamptz,
+    CONSTRAINT uq_payment_idempotency UNIQUE (idempotency_key)
+);
+CREATE INDEX ix_payment_claim ON claims.payment(claim_id);
+CREATE INDEX ix_payment_open ON claims.payment(status) WHERE status IN ('PENDING','SENT');
+
+-- Files uploaded at FNOL (photos, estimates). Stored by claims-service GcsDocumentStore in bucket
+-- corvane-claims-docs (europe-west2). Terraform replicates that bucket to corvane-claims-docs-dr in us-east1.
+CREATE TABLE claims.claim_document (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_id      uuid NOT NULL REFERENCES claims.claim(id) ON DELETE CASCADE,
+    kind          varchar(12) NOT NULL CHECK (kind IN ('PHOTO','ESTIMATE','INVOICE','LETTER','MEDICAL')),
+    gcs_uri       varchar(300) NOT NULL,
+    content_type  varchar(80) NOT NULL,
+    size_bytes    bigint NOT NULL,
+    uploaded_by   varchar(64) NOT NULL,
+    uploaded_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_claim_document_claim ON claims.claim_document(claim_id);
+
+CREATE TABLE claims.claim_audit (
+    id            bigserial PRIMARY KEY,
+    table_name    varchar(40) NOT NULL,
+    row_pk        varchar(64) NOT NULL,
+    action        char(1) NOT NULL CHECK (action IN ('I','U','D')),
+    old_row       jsonb,
+    new_row       jsonb,
+    changed_by    varchar(64) NOT NULL DEFAULT current_user,
+    changed_at    timestamptz NOT NULL DEFAULT now(),
+    retain_until  date NOT NULL DEFAULT (now() + interval '10 years')::date
+);
+COMMENT ON TABLE claims.claim_audit IS 'Full before/after rows of claim, claim_party and payment, kept 10 years. Not touched by purge_expired_claims().';
+CREATE INDEX ix_claim_audit_row ON claims.claim_audit(table_name, row_pk);
+
+CREATE INDEX ix_claim_policy ON claims.claim(policy_number);
+CREATE INDEX ix_claim_open ON claims.claim(status) WHERE status NOT IN ('CLOSED','DECLINED');
+CREATE INDEX ix_claim_closed ON claims.claim(closed_at) WHERE status = 'CLOSED';
+""")
+
+write("data/postgres/002_claims_views.sql", """-- Views over claimsdb.claims.
+
+-- Same fields as the CICS screen CLMINQM (transaction CLMI, program CLMINQ0), plus the policyholder.
+-- Intended for claims-service GET /v1/claims/{id}/summary, the REST replacement for CLMI.
+CREATE OR REPLACE VIEW claims.v_claim_summary AS
+SELECT c.id                           AS claim_id,
+       c.claim_number,
+       c.policy_number,
+       c.line_code,
+       c.status,
+       c.incident_date,
+       c.loss_cause,
+       c.reserve_amount,
+       COALESCE(p.paid, 0)            AS settled_amount,
+       c.fraud_score,
+       (c.fraud_score > 0.72)         AS refer_flag,
+       c.adjuster_id,
+       h.full_name                    AS policyholder_name,
+       c.currency
+FROM claims.claim c
+LEFT JOIN claims.claim_party h ON h.claim_id = c.id AND h.role = 'POLICYHOLDER'
+LEFT JOIN (SELECT claim_id, SUM(amount) AS paid
+             FROM claims.payment WHERE status = 'SETTLED' GROUP BY claim_id) p ON p.claim_id = c.id;
+
+CREATE OR REPLACE VIEW claims.v_open_claims_by_adjuster AS
+SELECT adjuster_id, line_code, COUNT(*) AS open_claims, SUM(reserve_amount) AS total_reserve
+FROM claims.claim
+WHERE status IN ('REGISTERED','REFERRED','APPROVED','REOPENED')
+GROUP BY adjuster_id, line_code;
+
+-- Nightly feed that keeps CORV.CLMMAST current for the CICS inquiry (CLMREC layout) until CLMI is retired.
+CREATE OR REPLACE VIEW claims.v_claim_mainframe_feed AS
+SELECT rpad(c.claim_number, 14)                      AS clm_number,
+       rpad(c.policy_number, 12)                     AS clm_pol_number,
+       c.line_code                                   AS clm_line_code,
+       CASE c.status WHEN 'REGISTERED' THEN 'REG' WHEN 'REFERRED' THEN 'TRI'
+                     WHEN 'APPROVED' THEN 'APP' WHEN 'PAID' THEN 'PAI'
+                     WHEN 'CLOSED' THEN 'CLS' ELSE 'REJ' END AS clm_status,
+       to_char(c.incident_date, 'YYYYMMDD')          AS clm_loss_date,
+       to_char(c.closed_at, 'YYYYMMDD')              AS clm_closed_date,
+       c.reserve_amount, c.paid_amount, c.fraud_score, c.adjuster_id
+FROM claims.claim c
+WHERE c.updated_at >= now() - interval '2 days';
+""")
+
+write("data/postgres/003_claims_functions.sql", """-- Functions and triggers for claimsdb.claims.
+
+CREATE OR REPLACE FUNCTION claims.fn_touch_updated_at() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.updated_at := now();
+    NEW.version := OLD.version + 1;
+    RETURN NEW;
+END $$;
+
+CREATE TRIGGER trg_claim_touch BEFORE UPDATE ON claims.claim
+    FOR EACH ROW EXECUTE FUNCTION claims.fn_touch_updated_at();
+
+-- Audit: stores the WHOLE old and new row as jsonb, personal data included (names, date of birth,
+-- national_id, injury notes). claim_audit rows are kept 10 years (retain_until) and are not purged
+-- with the claim.
+CREATE OR REPLACE FUNCTION claims.fn_audit_row() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+    pk text;
+BEGIN
+    pk := COALESCE(to_jsonb(NEW), to_jsonb(OLD)) ->> 'id';
+    INSERT INTO claims.claim_audit(table_name, row_pk, action, old_row, new_row)
+    VALUES (TG_TABLE_NAME, pk, left(TG_OP, 1),
+            CASE WHEN TG_OP <> 'INSERT' THEN to_jsonb(OLD) END,
+            CASE WHEN TG_OP <> 'DELETE' THEN to_jsonb(NEW) END);
+    RETURN COALESCE(NEW, OLD);
+END $$;
+
+CREATE TRIGGER trg_claim_audit AFTER INSERT OR UPDATE OR DELETE ON claims.claim
+    FOR EACH ROW EXECUTE FUNCTION claims.fn_audit_row();
+CREATE TRIGGER trg_claim_party_audit AFTER INSERT OR UPDATE OR DELETE ON claims.claim_party
+    FOR EACH ROW EXECUTE FUNCTION claims.fn_audit_row();
+CREATE TRIGGER trg_payment_audit AFTER INSERT OR UPDATE OR DELETE ON claims.payment
+    FOR EACH ROW EXECUTE FUNCTION claims.fn_audit_row();
+
+-- Retention: deletes claims closed more than 7 years ago, with their parties, reserves, scores, documents
+-- and payments (ON DELETE CASCADE). Scheduled by pg_cron every Sunday 03:00 UTC (see below).
+-- Document files in the GCS buckets are NOT deleted here.
+CREATE OR REPLACE FUNCTION claims.purge_expired_claims(p_dry_run boolean DEFAULT false)
+RETURNS integer
+LANGUAGE plpgsql AS $$
+DECLARE
+    n integer;
+BEGIN
+    IF p_dry_run THEN
+        SELECT COUNT(*) INTO n FROM claims.claim
+         WHERE status = 'CLOSED' AND closed_at < now() - interval '7 years';
+        RETURN n;
+    END IF;
+    DELETE FROM claims.claim
+     WHERE status = 'CLOSED' AND closed_at < now() - interval '7 years';
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RAISE NOTICE 'purge_expired_claims removed % claims', n;
+    RETURN n;
+END $$;
+
+COMMENT ON FUNCTION claims.purge_expired_claims(boolean) IS
+  'Records Retention Policy RRP-04: claims and their personal data are kept 7 years after closure, then deleted. '
+  'Replaces mainframe CLMPURGE (6 years) from the 2024 migration. Does not purge claims.claim_audit (10 years).';
+
+-- pg_cron: SELECT cron.schedule('purge-expired-claims', '0 3 * * 0', 'SELECT claims.purge_expired_claims()');
+""")
+
+write("data/postgres/004_dw_schema.sql", """-- claimsdb, schema dw: the small premium and claims warehouse. Owner: @corvane/data-platform.
+-- Billing lineage: PRMBILL -> CORV.PRM.BILLING.DAILY (BILLREC, 64 bytes) -> SFTP /landing/billing/
+--   -> Airflow DAG premium_billing_load -> warehouse-loader load_billing_file -> dw.premium_billing_stage
+--   -> dw.fn_merge_billing() -> dw.premium_billing -> dw.v_premium_by_line and dw.mv_premium_by_line_month.
+-- Claims lineage: claims-service -> claims.closed.v1 -> warehouse-loader closed_claims -> dw.claim_closed_fact.
+
+CREATE SCHEMA IF NOT EXISTS dw;
+
+-- One row per billing file. warehouse-loader inserts (file_name, record_count, started_at) and sets
+-- merged_count and finished_at after dw.fn_merge_billing().
+CREATE TABLE dw.billing_load (
+    load_id          bigserial PRIMARY KEY,
+    file_name        varchar(120) NOT NULL UNIQUE,
+    record_count     integer NOT NULL,
+    merged_count     integer,
+    status           varchar(10) NOT NULL DEFAULT 'STAGED'
+                       CHECK (status IN ('STAGED','MERGED','REJECTED')),
+    rejected_reason  varchar(200),
+    started_at       timestamptz NOT NULL DEFAULT now(),
+    finished_at      timestamptz
+);
+
+-- One row per BILLREC record, decoded by warehouse-loader (zoned decimal, sign overpunched, 2 implied dp).
+CREATE TABLE dw.premium_billing_stage (
+    stage_id     bigserial PRIMARY KEY,
+    load_id      bigint NOT NULL REFERENCES dw.billing_load(load_id) ON DELETE CASCADE,
+    policy_no    varchar(12) NOT NULL,
+    line_code    char(3) NOT NULL,
+    bill_date    date NOT NULL,
+    premium_amt  numeric(11,2) NOT NULL,
+    ipt_amt      numeric(9,2) NOT NULL,
+    currency     char(3) NOT NULL,
+    region       char(2) NOT NULL
+);
+CREATE INDEX ix_premium_billing_stage_load ON dw.premium_billing_stage(load_id);
+
+CREATE TABLE dw.premium_billing (
+    policy_no    varchar(12) NOT NULL,
+    line_code    char(3) NOT NULL,
+    bill_date    date NOT NULL,
+    premium_amt  numeric(11,2) NOT NULL,
+    ipt_amt      numeric(9,2) NOT NULL,
+    currency     char(3) NOT NULL,
+    region       char(2) NOT NULL,
+    load_id      bigint NOT NULL REFERENCES dw.billing_load(load_id),
+    loaded_at    timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (policy_no, line_code, bill_date)
+);
+CREATE INDEX ix_premium_billing_line_date ON dw.premium_billing(line_code, bill_date);
+
+-- Finance compares this view with the mainframe PRMMONTH summary for UK lines every month.
+CREATE OR REPLACE VIEW dw.v_premium_by_line AS
+SELECT line_code,
+       region,
+       currency,
+       date_trunc('month', bill_date)::date AS bill_month,
+       COUNT(*)                            AS policies_billed,
+       SUM(premium_amt)                    AS premium_total,
+       SUM(ipt_amt)                        AS ipt_total
+FROM dw.premium_billing
+GROUP BY line_code, region, currency, date_trunc('month', bill_date);
+
+-- Refreshed by the last task of the Airflow DAG premium_billing_load (REFRESH ... CONCURRENTLY needs the
+-- unique index below). Read by the finance dashboards.
+CREATE MATERIALIZED VIEW dw.mv_premium_by_line_month AS
+SELECT * FROM dw.v_premium_by_line;
+CREATE UNIQUE INDEX ux_mv_premium_by_line_month
+    ON dw.mv_premium_by_line_month(line_code, region, currency, bill_month);
+
+-- Upserted by warehouse-loader closed_claims for each claims.closed.v1 event (loss-ratio reporting).
+CREATE TABLE dw.claim_closed_fact (
+    claim_id          uuid PRIMARY KEY,
+    policy_number     varchar(12) NOT NULL,
+    line_code         char(3) NOT NULL,
+    closed_on         date NOT NULL,
+    paid_amount       numeric(12,2) NOT NULL,
+    reserve_released  numeric(12,2) NOT NULL DEFAULT 0,
+    currency          char(3) NOT NULL,
+    loaded_at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_claim_closed_fact_line ON dw.claim_closed_fact(line_code, closed_on);
+""")
+
+write("data/postgres/005_dw_merge.sql", """-- dw.fn_merge_billing: moves one staged billing file into dw.premium_billing and returns the number of
+-- rows merged. Called by warehouse-loader load_billing_file after staging. Re-running a load is safe:
+-- rows are upserted on (policy_no, line_code, bill_date).
+
+CREATE OR REPLACE FUNCTION dw.fn_merge_billing(p_load_id bigint)
+RETURNS integer
+LANGUAGE plpgsql AS $$
+DECLARE
+    staged   integer;
+    expected integer;
+    merged   integer;
+BEGIN
+    SELECT record_count INTO expected FROM dw.billing_load WHERE load_id = p_load_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'billing load % not found', p_load_id;
+    END IF;
+    SELECT COUNT(*) INTO staged FROM dw.premium_billing_stage WHERE load_id = p_load_id;
+    IF staged <> expected THEN
+        UPDATE dw.billing_load
+           SET status = 'REJECTED',
+               rejected_reason = format('staged %s rows, file had %s records', staged, expected)
+         WHERE load_id = p_load_id;
+        RETURN 0;
+    END IF;
+
+    INSERT INTO dw.premium_billing AS t
+          (policy_no, line_code, bill_date, premium_amt, ipt_amt, currency, region, load_id)
+    SELECT policy_no, line_code, bill_date, premium_amt, ipt_amt, currency, region, load_id
+      FROM dw.premium_billing_stage
+     WHERE load_id = p_load_id
+    ON CONFLICT (policy_no, line_code, bill_date) DO UPDATE
+       SET premium_amt = EXCLUDED.premium_amt,
+           ipt_amt     = EXCLUDED.ipt_amt,
+           load_id     = EXCLUDED.load_id,
+           loaded_at   = now();
+    GET DIAGNOSTICS merged = ROW_COUNT;
+
+    UPDATE dw.billing_load SET status = 'MERGED' WHERE load_id = p_load_id;
+    DELETE FROM dw.premium_billing_stage WHERE load_id = p_load_id;
+    RETURN merged;
+END $$;
+""")
+
+# ---------------------------------------------------------------- reference data
+write("data/reference/ipt_rates.csv", """region,line_code,ipt_rate,effective_from,note
+UK,MTR,0.12,2017-06-01,standard rate
+UK,HOM,0.12,2017-06-01,standard rate
+UK,CNT,0.12,2017-06-01,standard rate
+UK,TRV,0.20,2017-06-01,higher rate
+UK,PET,0.12,2017-06-01,standard rate
+UK,LLD,0.12,2017-06-01,standard rate
+UK,MAR,0.00,2017-06-01,exempt (commercial marine)
+UK,CPR,0.12,2017-06-01,standard rate
+UK,PLB,0.12,2017-06-01,standard rate
+UK,PIN,0.12,2017-06-01,standard rate
+UK,CYB,0.12,2017-06-01,standard rate
+UK,GDG,0.20,2017-06-01,higher rate (mechanical breakdown and gadget)
+US,*,0.00,2023-11-01,state premium tax billed by the fronting carrier
+""")
+write("data/reference/excess_bands.csv", """line_code,compulsory_excess,voluntary_options,max_voluntary_discount_pct,source
+MTR,250,0|100|250|500,20,UW-2024-02
+HOM,250,0|100|250|500|1000,20,UW-2024-02
+CNT,250,0|100|250,20,UW-2024-02
+TRV,250,0|50|100,20,UW-2024-02
+PET,250,0|50|100|200,20,UW-2024-02
+LLD,250,0|250|500,20,UW-2024-02
+MAR,250,0|1000|2500,20,UW-2024-02
+CPR,250,0|500|1000|2500,20,UW-2024-02
+PLB,250,0|250|500,20,UW-2024-02
+PIN,250,0|1000|2500|5000,20,UW-2024-02
+CYB,250,0|1000|5000,20,UW-2024-02
+GDG,250,0|25|50,20,UW-2024-02
+""")
+
+towns = [
+    ("CV1 2AB", "Abermôr", "Ceredigion", "UK", 2, "B"),
+    ("CV2 9QF", "Pen-y-Bryn Glân", "Gwynedd", "UK", 1, "A"),
+    ("CV3 4LS", "Llanfîr", "Powys", "UK", 3, "B"),
+    ("CV4 7TD", "Aberdâr Uchaf", "Rhondda Cynon Taf", "UK", 2, "C"),
+    ("CV5 1HX", "Trefîn Isaf", "Pembrokeshire", "UK", 1, "A"),
+    ("CV6 3NP", "Môn Newydd", "Anglesey", "UK", 3, "A"),
+    ("CV7 8RW", "Coed-y-Gâr", "Conwy", "UK", 2, "B"),
+    ("CV8 5JE", "Saint-Hélier Cove", "Channel Coast", "UK", 2, "B"),
+    ("CV9 6YU", "Glyn Ebwy Côr", "Blaenau Gwent", "UK", 1, "C"),
+    ("CW1 4BB", "Nant Ffrancôn", "Gwynedd", "UK", 3, "A"),
+    ("CW2 2MM", "Rhyd-y-Fôn", "Ceredigion", "UK", 2, "A"),
+    ("CW3 9KD", "Pontrhydfendigaid Fâch", "Ceredigion", "UK", 1, "A"),
+    ("87532", "Española Vieja", "New Mexico", "US", 1, "B"),
+    ("81212", "Cañon Rojo", "Colorado", "US", 2, "B"),
+    ("95110", "San José del Río", "California", "US", 3, "C"),
+    ("87801", "Socorro Peñasco", "New Mexico", "US", 1, "A"),
+    ("33134", "Coral Gáble Heights", "Florida", "US", 3, "C"),
+    ("78205", "Béxar Crossing", "Texas", "US", 2, "C"),
+    ("70116", "Faubourg Marigné", "Louisiana", "US", 3, "C"),
+    ("04730", "Houlton Ste-Agathe", "Maine", "US", 1, "A"),
+]
+rows = ["postcode,town,county_or_state,region,flood_zone,crime_band"]
+rows += [",".join(t[:3]) + f",{t[3]},{t[4]},{t[5]}" for t in towns]
+write("data/reference/postcodes-latin1.csv", "\n".join(rows) + "\n", encoding="latin-1")
+
+if ERRORS:
+    raise SystemExit("lines past column 72:\n" + "\n".join(ERRORS))
+print("core written")

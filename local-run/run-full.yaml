@@ -1,0 +1,14 @@
+# Corvane Mutual, local run 2: the standard recipe with its AI stages on; stops at the first AI stage with no recorded answer and writes its census.
+project: corvane-mutual
+application: claims
+owner_team: claims-platform
+recipe: recipe-full.yaml
+unattended: true
+review_mode: confidence
+gates: [publish]
+question: Who calls the claims-service approve endpoint?
+sources:
+  - source_id: corvane-estate
+    kind: file-drop
+    location: ../estate-v2/corvane-estate
+    code_page: utf-8
