@@ -60,3 +60,13 @@ CREATE TABLE LEDGER.POSTING_AUDIT (
 
 CREATE INDEX LEDGER.IX_POSTING_ACCOUNT ON LEDGER.PREMIUM_POSTING (ACCOUNT_ID, EFFECTIVE_DATE);
 CREATE INDEX LEDGER.IX_ACCOUNT_PARTY ON LEDGER.POLICY_ACCOUNT (PARTY_ID);
+
+-- Premium collected from the policyholder (direct debit or card), posted by policy-admin billing.
+-- Not the same thing as claims.payment in claimsdb, which is a claim payout to a payee.
+CREATE TABLE LEDGER.PAYMENT (
+    PAYMENT_ID          NUMBER(14)      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    POLICY_ACCOUNT_ID   NUMBER(12)      NOT NULL REFERENCES LEDGER.POLICY_ACCOUNT (ACCOUNT_ID),
+    AMOUNT              NUMBER(13,2)    NOT NULL,
+    METHOD              VARCHAR2(4)     NOT NULL CHECK (METHOD IN ('DD', 'CARD')),
+    COLLECTED_ON        DATE            NOT NULL
+);

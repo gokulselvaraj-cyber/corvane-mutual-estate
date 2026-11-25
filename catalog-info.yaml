@@ -52,3 +52,35 @@ spec:
   type: storage-bucket
   owner: team-platform-ops
   system: corvane-insurance-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: claims
+  description: Claims division (FNOL, claims platform and payouts)
+spec:
+  type: department
+  profile:
+    displayName: Claims division
+  children: [team-fnol, team-claims-platform, team-payments]
+  members: [user:j.okafor]
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-claims-platform
+  description: Claims platform squad (claims-service core, claimsdb)
+spec:
+  type: team
+  parent: claims
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: j.okafor
+  description: Claims engineering manager
+spec:
+  profile:
+    displayName: J. Okafor
+  memberOf: [claims]

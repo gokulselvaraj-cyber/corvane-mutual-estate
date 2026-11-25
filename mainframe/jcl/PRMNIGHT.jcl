@@ -51,3 +51,4 @@ SH /u/corvbill/scripts/sftp_billing.sh
 /*
 //STDOUT   DD SYSOUT=*
 //STDERR   DD SYSOUT=*
+//SFTPCFG  DD DSN=CORV.PARMLIB(SFTPPARM01),DISP=SHR

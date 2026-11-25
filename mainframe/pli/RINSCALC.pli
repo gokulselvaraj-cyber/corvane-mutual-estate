@@ -1,0 +1,129 @@
+ /*================================================================*/
+ /* RINSCALC  EFFECTIVE TREATY CESSION SHARES          PRMMONTH STEP080 */
+ /*                                                                    */
+ /* READS THE SIGNED TREATY TERMS (CORV.RI.TREATY.TERMS) AND THE       */
+ /* POLICY MASTER (CORV.POLMAST, POLREC LAYOUT) AND WRITES ONE 40-BYTE */
+ /* CESSTAB RECORD PER PRODUCT LINE WITH THE SHARE RIBORDX CEDES THIS  */
+ /* MONTH. FOR A QUOTA SHARE THE SHARE IS THE SLIP SHARE. FOR          */
+ /* COMMERCIAL PROPERTY THE 5-LINE SURPLUS IS ADDED: EACH RISK OVER    */
+ /* THE RETAINED LINE CEDES (SUM INSURED - LINE) / SUM INSURED, CAPPED */
+ /* AT 5 LINES, AND THE RESULT IS WEIGHTED BY SUM INSURED.             */
+ /* WRITTEN IN PL/I IN 2026 BY THE ACTUARIAL SYSTEMS TEAM, WHO OWN THE */
+ /* SURPLUS MODEL; RUN AND SCHEDULED BY TEAM-MAINFRAME.                */
+ /* USD RATE: MONTH-END RATE FROM THE TREATY TERMS FILE (HEADER CARD). */
+ /*================================================================*/
+ RINSCALC: PROCEDURE OPTIONS(MAIN);
+
+   DCL TREATY  FILE RECORD INPUT;
+   DCL POLMAST FILE RECORD INPUT;
+   DCL CESSTAB FILE RECORD OUTPUT;
+
+   DCL 1 TERMS_REC,
+         3 T_LINE_CODE     CHAR(3),
+         3 T_TREATY_ID     CHAR(10),
+         3 T_TYPE          CHAR(4),
+         3 T_SLIP_SHARE    PIC '999V9999',
+         3 T_LINE_SIZE     PIC '(11)9V99',
+         3 T_SURPLUS_LINES PIC '99',
+         3 T_USD_RATE      PIC '99V(6)9',
+         3 FILLER          CHAR(37);
+
+   DCL 1 POL_REC,
+         3 POL_NUMBER      CHAR(12),
+         3 POL_LINE_CODE   CHAR(3),
+         3 POL_STATUS      CHAR(1),
+         3 POL_REGION      CHAR(2),
+         3 POL_CURRENCY    CHAR(3),
+         3 POL_INSURED     CHAR(236),
+         3 POL_DATES       CHAR(24),
+         3 POL_BILL_FREQ   CHAR(1),
+         3 POL_SUM_INSURED FIXED DEC(13,2),
+         3 POL_REST        CHAR(112);
+
+   DCL 1 CESS_REC,
+         3 C_LINE_CODE     CHAR(3),
+         3 C_TREATY_ID     CHAR(10),
+         3 C_EFFECTIVE_PCT PIC '999V9999',
+         3 C_USD_RATE      PIC '99V(6)9',
+         3 FILLER          CHAR(12) INIT('');
+
+   DCL 1 LINE_TABLE(12),
+         3 L_CODE          CHAR(3),
+         3 L_TREATY        CHAR(10),
+         3 L_TYPE          CHAR(4),
+         3 L_SLIP          FIXED DEC(7,4),
+         3 L_LINE_SIZE     FIXED DEC(13,2),
+         3 L_LINES         FIXED BIN(15),
+         3 L_SI_TOTAL      FIXED DEC(17,2) INIT((12)0),
+         3 L_SI_CEDED      FIXED DEC(17,2) INIT((12)0);
+
+   DCL (N_LINES, I)        FIXED BIN(15) INIT(0);
+   DCL USD_RATE            FIXED DEC(8,6) INIT(1);
+   DCL CEDE                FIXED DEC(17,2);
+   DCL MAX_CEDE            FIXED DEC(17,2);
+   DCL EFFECTIVE           FIXED DEC(7,4);
+   DCL (EOF_TERMS, EOF_POL) BIT(1) INIT('0'B);
+
+   ON ENDFILE(TREATY)  EOF_TERMS = '1'B;
+   ON ENDFILE(POLMAST) EOF_POL   = '1'B;
+
+   /* 1. TREATY TERMS: ONE CARD PER LINE OF BUSINESS                 */
+   OPEN FILE(TREATY), FILE(POLMAST), FILE(CESSTAB);
+   READ FILE(TREATY) INTO(TERMS_REC);
+   DO WHILE (^EOF_TERMS);
+      IF T_LINE_CODE = 'USD' THEN
+         USD_RATE = T_USD_RATE;
+      ELSE DO;
+         N_LINES = N_LINES + 1;
+         L_CODE(N_LINES)      = T_LINE_CODE;
+         L_TREATY(N_LINES)    = T_TREATY_ID;
+         L_TYPE(N_LINES)      = T_TYPE;
+         L_SLIP(N_LINES)      = T_SLIP_SHARE;
+         L_LINE_SIZE(N_LINES) = T_LINE_SIZE;
+         L_LINES(N_LINES)     = T_SURPLUS_LINES;
+      END;
+      READ FILE(TREATY) INTO(TERMS_REC);
+   END;
+
+   /* 2. POLICY MASTER: IN-FORCE UK RISKS, SUM INSURED PER LINE      */
+   READ FILE(POLMAST) INTO(POL_REC);
+   DO WHILE (^EOF_POL);
+      IF POL_STATUS = 'F' & POL_REGION = 'UK' THEN
+         DO I = 1 TO N_LINES;
+            IF L_CODE(I) = POL_LINE_CODE THEN DO;
+               L_SI_TOTAL(I) = L_SI_TOTAL(I) + POL_SUM_INSURED;
+               IF L_LINES(I) > 0 & POL_SUM_INSURED > L_LINE_SIZE(I) THEN DO;
+                  CEDE     = POL_SUM_INSURED - L_LINE_SIZE(I);
+                  MAX_CEDE = L_LINE_SIZE(I) * L_LINES(I);
+                  IF CEDE > MAX_CEDE THEN CEDE = MAX_CEDE;
+                  L_SI_CEDED(I) = L_SI_CEDED(I) + CEDE;
+               END;
+            END;
+         END;
+      READ FILE(POLMAST) INTO(POL_REC);
+   END;
+
+   /* 3. ONE CESSTAB RECORD PER LINE                                  */
+   DO I = 1 TO N_LINES;
+      SELECT (L_TYPE(I));
+         WHEN ('QS  ') DO;
+            EFFECTIVE = L_SLIP(I);
+            IF L_LINES(I) > 0 & L_SI_TOTAL(I) > 0 THEN
+               /* SURPLUS TAKES ITS SHARE OF WHAT THE QUOTA SHARE LEAVES */
+               EFFECTIVE = L_SLIP(I)
+                         + (100 - L_SLIP(I)) * L_SI_CEDED(I) / L_SI_TOTAL(I);
+         END;
+         WHEN ('XL  ') EFFECTIVE = 0;   /* NON-PROPORTIONAL: NO SHARE */
+         OTHERWISE     EFFECTIVE = 0;   /* RETAINED LINE (PET)        */
+      END;
+      C_LINE_CODE     = L_CODE(I);
+      C_TREATY_ID     = L_TREATY(I);
+      C_EFFECTIVE_PCT = EFFECTIVE;
+      C_USD_RATE      = USD_RATE;
+      WRITE FILE(CESSTAB) FROM(CESS_REC);
+      PUT SKIP EDIT('RINSCALC ', L_CODE(I), ' EFFECTIVE SHARE ', EFFECTIVE)
+                   (A, A, A, F(9,4));
+   END;
+
+   CLOSE FILE(TREATY), FILE(POLMAST), FILE(CESSTAB);
+ END RINSCALC;

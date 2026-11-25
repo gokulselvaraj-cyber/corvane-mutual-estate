@@ -1,0 +1,45 @@
+{
+  "type": "record",
+  "name": "ClaimReserveChanged",
+  "namespace": "com.corvane.events",
+  "doc": "Planned claims.reserve-changed.v1 for the warehouse reserve-movement report. Not produced by any service yet.",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "lineCode",
+      "type": "string"
+    },
+    {
+      "name": "reserveAmount",
+<<<<<<< HEAD
+      "type": {
+        "type": "bytes",
+        "logicalType": "decimal",
+        "precision": 12,
+        "scale": 2
+      }
+=======
+      "type": "double"
+>>>>>>> feature/reserve-events
+    },
+    {
+      "name": "previousAmount",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "reason",
+      "type": "string"
+    },
+    {
+      "name": "changedAt",
+      "type": "string"
+    }
+  ]
+}

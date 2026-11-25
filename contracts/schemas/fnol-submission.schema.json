@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.corvane.example/fnol-submission.json",
+  "title": "FnolSubmission",
+  "description": "Body of POST /v1/claims as the customer portal's FnolWizard sends it at the Submit step. Owned by claims-service.",
+  "type": "object",
+  "required": [
+    "policyNumber",
+    "lineCode",
+    "lossDate",
+    "cause",
+    "claimedAmount",
+    "claimant"
+  ],
+  "properties": {
+    "policyNumber": {
+      "type": "string",
+      "pattern": "^(MTR|HOM|CNT|TRV|PET|LLD|MAR|CPR|PLB|PIN|CYB|GDG)[0-9]{9}$",
+      "description": "The 12-character POLICY-NO: line code plus 9 digits."
+    },
+    "lineCode": {
+      "type": "string",
+      "enum": [
+        "MTR",
+        "HOM",
+        "CNT",
+        "TRV",
+        "PET",
+        "LLD",
+        "MAR",
+        "CPR",
+        "PLB",
+        "PIN",
+        "CYB",
+        "GDG"
+      ]
+    },
+    "lossDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "cause": {
+      "type": "string",
+      "maxLength": 6,
+      "description": "Loss cause code, e.g. THEFT, FLOOD, ACCDNT."
+    },
+    "narrative": {
+      "type": "string",
+      "maxLength": 4000
+    },
+    "injuryNotes": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "personal data (health)"
+    },
+    "photos": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/photo"
+      }
+    },
+    "claimedAmount": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "GBP",
+        "USD"
+      ],
+      "default": "GBP"
+    },
+    "claimant": {
+      "$ref": "party.json"
+    },
+    "otherParties": {
+      "type": "array",
+      "items": {
+        "$ref": "party.json"
+      }
+    }
+  },
+  "$defs": {
+    "photo": {
+      "type": "object",
+      "required": [
+        "draftPhotoId",
+        "contentType"
+      ],
+      "properties": {
+        "draftPhotoId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Returned by POST /v1/claims/drafts/{id}/photos."
+        },
+        "contentType": {
+          "type": "string",
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/heic"
+          ]
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "maximum": 10485760
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

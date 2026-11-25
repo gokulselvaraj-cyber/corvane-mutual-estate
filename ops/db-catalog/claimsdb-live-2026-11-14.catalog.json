@@ -1,0 +1,228 @@
+{
+ "format": "msock-db-catalog/1",
+ "engine": "postgresql",
+ "database": "claimsdb",
+ "server_version": "15.8",
+ "exported_at": "2026-11-14T03:10:00Z",
+ "exported_by": "platform-ops DBA catalogue job (dba-catalog-export, read-only role)",
+ "note": "Structure only: no row samples are exported.",
+ "schemas": [
+  {
+   "name": "claims",
+   "tables": [
+    {
+     "name": "claim",
+     "kind": "table",
+     "comment": "One row per insurance claim. Retention: 7 years after closed_at, enforced by claims.purge_expired_claims().",
+     "row_estimate": 412880,
+     "columns": [
+      {"name": "id", "data_type": "uuid", "nullable": false, "default": "gen_random_uuid()", "ordinal": 1},
+      {"name": "claim_number", "data_type": "character varying(14)", "nullable": false, "ordinal": 2},
+      {"name": "policy_number", "data_type": "character varying(12)", "nullable": false, "ordinal": 3},
+      {"name": "line_code", "data_type": "character(3)", "nullable": false, "ordinal": 4},
+      {"name": "status", "data_type": "character varying(12)", "nullable": false, "default": "'REGISTERED'::character varying", "ordinal": 5},
+      {"name": "triage_outcome", "data_type": "character varying(20)", "nullable": true, "ordinal": 6},
+      {"name": "incident_date", "data_type": "date", "nullable": false, "ordinal": 7},
+      {"name": "loss_cause", "data_type": "character varying(6)", "nullable": false, "ordinal": 8},
+      {"name": "description", "data_type": "text", "nullable": true, "ordinal": 9},
+      {"name": "injury_notes", "data_type": "text", "nullable": true, "comment": "Personal data (health). Free text typed by the claimant at FNOL; also sent to fraud-scoring.", "ordinal": 10},
+      {"name": "estimated_amount", "data_type": "numeric(12,2)", "nullable": false, "ordinal": 11},
+      {"name": "reserve_amount", "data_type": "numeric(12,2)", "nullable": false, "default": "0", "ordinal": 12},
+      {"name": "excess_amount", "data_type": "numeric(9,2)", "nullable": false, "default": "0", "ordinal": 13},
+      {"name": "paid_amount", "data_type": "numeric(12,2)", "nullable": false, "default": "0", "ordinal": 14},
+      {"name": "fraud_score", "data_type": "numeric(4,3)", "nullable": true, "comment": "Latest score from fraud-scoring POST /v1/score; history in claims.fraud_score. Refer above 0.72.", "ordinal": 15},
+      {"name": "fraud_band", "data_type": "character varying(6)", "nullable": true, "comment": "LOW / MEDIUM / HIGH, set by the fraud operations team.", "ordinal": 16},
+      {"name": "adjuster_id", "data_type": "character varying(8)", "nullable": true, "ordinal": 17},
+      {"name": "currency", "data_type": "character(3)", "nullable": false, "default": "'GBP'::bpchar", "ordinal": 18},
+      {"name": "region", "data_type": "character(2)", "nullable": false, "default": "'UK'::bpchar", "ordinal": 19},
+      {"name": "registered_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 20},
+      {"name": "registered_by", "data_type": "character varying(64)", "nullable": false, "ordinal": 21},
+      {"name": "reported_at", "data_type": "timestamp with time zone", "nullable": true, "comment": "Generated always as (registered_at) stored.", "ordinal": 22},
+      {"name": "closed_at", "data_type": "timestamp with time zone", "nullable": true, "ordinal": 23},
+      {"name": "legacy_reserve_text", "data_type": "character varying(40)", "nullable": true, "ordinal": 24},
+      {"name": "updated_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 25},
+      {"name": "version", "data_type": "integer", "nullable": false, "default": "0", "ordinal": 26}
+     ],
+     "primary_key": {"name": "claim_pkey", "columns": ["id"]},
+     "unique_constraints": [
+      {"name": "claim_claim_number_key", "columns": ["claim_number"]}
+     ],
+     "check_constraints": [
+      {"name": "claim_line_code_check", "expression": "line_code = ANY (ARRAY['MTR'::bpchar,'HOM'::bpchar,'CNT'::bpchar,'TRV'::bpchar,'PET'::bpchar,'LLD'::bpchar,'MAR'::bpchar,'CPR'::bpchar,'PLB'::bpchar,'PIN'::bpchar,'CYB'::bpchar,'GDG'::bpchar])"},
+      {"name": "claim_status_check", "expression": "status::text = ANY (ARRAY['REGISTERED','REFERRED','APPROVED','PAID','CLOSED','DECLINED','REOPENED']::text[])"},
+      {"name": "claim_fraud_score_check", "expression": "fraud_score >= 0::numeric AND fraud_score <= 1::numeric"},
+      {"name": "claim_region_check", "expression": "region = ANY (ARRAY['UK'::bpchar, 'US'::bpchar])"}
+     ],
+     "indexes": [
+      {"name": "ix_claim_policy", "columns": ["policy_number"], "unique": false, "method": "btree"},
+      {"name": "ix_claim_open", "columns": ["status"], "unique": false, "method": "btree"},
+      {"name": "ix_claim_closed", "columns": ["closed_at"], "unique": false, "method": "btree"}
+     ]
+    },
+    {
+     "name": "claim_party",
+     "kind": "table",
+     "comment": "Personal data: name, date of birth, NI number or SSN, contact details, address.",
+     "row_estimate": 903114,
+     "columns": [
+      {"name": "id", "data_type": "uuid", "nullable": false, "default": "gen_random_uuid()", "ordinal": 1},
+      {"name": "claim_id", "data_type": "uuid", "nullable": false, "ordinal": 2},
+      {"name": "role", "data_type": "character varying(12)", "nullable": false, "ordinal": 3},
+      {"name": "full_name", "data_type": "character varying(120)", "nullable": false, "ordinal": 4},
+      {"name": "date_of_birth", "data_type": "date", "nullable": true, "ordinal": 5},
+      {"name": "ni_number", "data_type": "character varying(9)", "nullable": true, "comment": "UK National Insurance number. Split out of national_id by hotfix CHG-90117.", "ordinal": 6},
+      {"name": "ssn", "data_type": "character varying(11)", "nullable": true, "comment": "US Social Security number. Split out of national_id by hotfix CHG-90117.", "ordinal": 7},
+      {"name": "email", "data_type": "character varying(254)", "nullable": true, "ordinal": 8},
+      {"name": "phone", "data_type": "character varying(20)", "nullable": true, "ordinal": 9},
+      {"name": "address_line1", "data_type": "character varying(120)", "nullable": true, "ordinal": 10},
+      {"name": "town", "data_type": "character varying(60)", "nullable": true, "ordinal": 11},
+      {"name": "postcode", "data_type": "character varying(10)", "nullable": true, "ordinal": 12},
+      {"name": "country", "data_type": "character(2)", "nullable": false, "default": "'GB'::bpchar", "ordinal": 13}
+     ],
+     "primary_key": {"name": "claim_party_pkey", "columns": ["id"]},
+     "foreign_keys": [
+      {"name": "claim_party_claim_id_fkey", "columns": ["claim_id"], "ref_schema": "claims", "ref_table": "claim", "ref_columns": ["id"], "on_delete": "CASCADE", "on_update": "NO ACTION"}
+     ],
+     "check_constraints": [
+      {"name": "claim_party_role_check", "expression": "role::text = ANY (ARRAY['POLICYHOLDER','THIRD_PARTY','WITNESS','PAYEE']::text[])"}
+     ],
+     "indexes": [
+      {"name": "ix_claim_party_claim", "columns": ["claim_id"], "unique": false, "method": "btree"},
+      {"name": "ux_claim_party_holder", "columns": ["claim_id"], "unique": true, "method": "btree"}
+     ]
+    },
+    {
+     "name": "claim_reserve",
+     "kind": "table",
+     "row_estimate": 1288420,
+     "columns": [
+      {"name": "id", "data_type": "bigint", "nullable": false, "default": "nextval('claims.claim_reserve_id_seq'::regclass)", "ordinal": 1},
+      {"name": "claim_id", "data_type": "uuid", "nullable": false, "ordinal": 2},
+      {"name": "reserve_type", "data_type": "character varying(10)", "nullable": false, "ordinal": 3},
+      {"name": "amount", "data_type": "numeric(12,2)", "nullable": false, "ordinal": 4},
+      {"name": "currency", "data_type": "character(3)", "nullable": false, "default": "'GBP'::bpchar", "ordinal": 5},
+      {"name": "reason", "data_type": "character varying(200)", "nullable": true, "ordinal": 6},
+      {"name": "set_by", "data_type": "character varying(64)", "nullable": false, "ordinal": 7},
+      {"name": "set_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 8}
+     ],
+     "primary_key": {"name": "claim_reserve_pkey", "columns": ["id"]},
+     "foreign_keys": [
+      {"name": "claim_reserve_claim_id_fkey", "columns": ["claim_id"], "ref_schema": "claims", "ref_table": "claim", "ref_columns": ["id"], "on_delete": "CASCADE", "on_update": "NO ACTION"}
+     ],
+     "check_constraints": [
+      {"name": "claim_reserve_reserve_type_check", "expression": "reserve_type::text = ANY (ARRAY['INDEMNITY','EXPENSE','RECOVERY']::text[])"}
+     ],
+     "indexes": [
+      {"name": "ix_claim_reserve_claim", "columns": ["claim_id", "set_at"], "unique": false, "method": "btree"}
+     ]
+    },
+    {
+     "name": "fraud_score",
+     "kind": "table",
+     "row_estimate": 409977,
+     "columns": [
+      {"name": "claim_id", "data_type": "uuid", "nullable": false, "ordinal": 1},
+      {"name": "score", "data_type": "numeric(4,3)", "nullable": false, "ordinal": 2},
+      {"name": "decision", "data_type": "character varying(10)", "nullable": false, "ordinal": 3},
+      {"name": "indicators", "data_type": "jsonb", "nullable": false, "default": "'[]'::jsonb", "ordinal": 4},
+      {"name": "llm_label", "data_type": "character varying(40)", "nullable": true, "ordinal": 5},
+      {"name": "model_version", "data_type": "character varying(20)", "nullable": false, "ordinal": 6},
+      {"name": "scored_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 7}
+     ],
+     "primary_key": {"name": "fraud_score_pkey", "columns": ["claim_id"]},
+     "foreign_keys": [
+      {"name": "fraud_score_claim_id_fkey", "columns": ["claim_id"], "ref_schema": "claims", "ref_table": "claim", "ref_columns": ["id"], "on_delete": "CASCADE", "on_update": "NO ACTION"}
+     ],
+     "check_constraints": [
+      {"name": "fraud_score_decision_check", "expression": "decision::text = ANY (ARRAY['CLEAR','REFER','DECLINE']::text[])"}
+     ]
+    },
+    {
+     "name": "payment",
+     "kind": "table",
+     "row_estimate": 301552,
+     "columns": [
+      {"name": "id", "data_type": "uuid", "nullable": false, "default": "gen_random_uuid()", "ordinal": 1},
+      {"name": "idempotency_key", "data_type": "character varying(80)", "nullable": false, "ordinal": 2},
+      {"name": "claim_id", "data_type": "uuid", "nullable": false, "ordinal": 3},
+      {"name": "amount", "data_type": "numeric(12,2)", "nullable": false, "ordinal": 4},
+      {"name": "currency", "data_type": "character(3)", "nullable": false, "ordinal": 5},
+      {"name": "status", "data_type": "character varying(10)", "nullable": false, "ordinal": 6},
+      {"name": "provider", "data_type": "character varying(16)", "nullable": false, "default": "'CLEARRIVER'::character varying", "ordinal": 7},
+      {"name": "bank_reference", "data_type": "character varying(40)", "nullable": true, "ordinal": 8},
+      {"name": "failure_reason", "data_type": "character varying(200)", "nullable": true, "ordinal": 9},
+      {"name": "created_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 10},
+      {"name": "settled_at", "data_type": "timestamp with time zone", "nullable": true, "ordinal": 11}
+     ],
+     "primary_key": {"name": "payment_pkey", "columns": ["id"]},
+     "unique_constraints": [
+      {"name": "uq_payment_idempotency", "columns": ["idempotency_key"]}
+     ],
+     "foreign_keys": [
+      {"name": "payment_claim_id_fkey", "columns": ["claim_id"], "ref_schema": "claims", "ref_table": "claim", "ref_columns": ["id"], "on_delete": "CASCADE", "on_update": "NO ACTION"}
+     ],
+     "check_constraints": [
+      {"name": "payment_amount_check", "expression": "amount > 0::numeric"},
+      {"name": "payment_status_check", "expression": "status::text = ANY (ARRAY['PENDING','SENT','SETTLED','FAILED','REVERSED']::text[])"}
+     ],
+     "indexes": [
+      {"name": "ix_payment_claim", "columns": ["claim_id"], "unique": false, "method": "btree"},
+      {"name": "ix_payment_open", "columns": ["status"], "unique": false, "method": "btree"}
+     ]
+    },
+    {
+     "name": "claim_document",
+     "kind": "table",
+     "row_estimate": 1876003,
+     "columns": [
+      {"name": "id", "data_type": "uuid", "nullable": false, "default": "gen_random_uuid()", "ordinal": 1},
+      {"name": "claim_id", "data_type": "uuid", "nullable": false, "ordinal": 2},
+      {"name": "kind", "data_type": "character varying(12)", "nullable": false, "ordinal": 3},
+      {"name": "gcs_uri", "data_type": "character varying(300)", "nullable": false, "ordinal": 4},
+      {"name": "content_type", "data_type": "character varying(80)", "nullable": false, "ordinal": 5},
+      {"name": "size_bytes", "data_type": "bigint", "nullable": false, "ordinal": 6},
+      {"name": "uploaded_by", "data_type": "character varying(64)", "nullable": false, "ordinal": 7},
+      {"name": "uploaded_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 8}
+     ],
+     "primary_key": {"name": "claim_document_pkey", "columns": ["id"]},
+     "foreign_keys": [
+      {"name": "claim_document_claim_id_fkey", "columns": ["claim_id"], "ref_schema": "claims", "ref_table": "claim", "ref_columns": ["id"], "on_delete": "CASCADE", "on_update": "NO ACTION"}
+     ],
+     "check_constraints": [
+      {"name": "claim_document_kind_check", "expression": "kind::text = ANY (ARRAY['PHOTO','ESTIMATE','INVOICE','LETTER','MEDICAL']::text[])"}
+     ],
+     "indexes": [
+      {"name": "ix_claim_document_claim", "columns": ["claim_id"], "unique": false, "method": "btree"}
+     ]
+    },
+    {
+     "name": "claim_audit",
+     "kind": "table",
+     "comment": "Full before/after rows of claim, claim_party and payment, kept 10 years. Not touched by purge_expired_claims().",
+     "row_estimate": 9604311,
+     "columns": [
+      {"name": "id", "data_type": "bigint", "nullable": false, "default": "nextval('claims.claim_audit_id_seq'::regclass)", "ordinal": 1},
+      {"name": "table_name", "data_type": "character varying(40)", "nullable": false, "ordinal": 2},
+      {"name": "row_pk", "data_type": "character varying(64)", "nullable": false, "ordinal": 3},
+      {"name": "action", "data_type": "character(1)", "nullable": false, "ordinal": 4},
+      {"name": "old_row", "data_type": "jsonb", "nullable": true, "ordinal": 5},
+      {"name": "new_row", "data_type": "jsonb", "nullable": true, "ordinal": 6},
+      {"name": "changed_by", "data_type": "character varying(64)", "nullable": false, "default": "CURRENT_USER", "ordinal": 7},
+      {"name": "changed_at", "data_type": "timestamp with time zone", "nullable": false, "default": "now()", "ordinal": 8},
+      {"name": "retain_until", "data_type": "date", "nullable": false, "default": "((now() + '10 years'::interval))::date", "ordinal": 9}
+     ],
+     "primary_key": {"name": "claim_audit_pkey", "columns": ["id"]},
+     "check_constraints": [
+      {"name": "claim_audit_action_check", "expression": "action = ANY (ARRAY['I'::bpchar, 'U'::bpchar, 'D'::bpchar])"}
+     ],
+     "indexes": [
+      {"name": "ix_claim_audit_row", "columns": ["table_name", "row_pk"], "unique": false, "method": "btree"}
+     ]
+    }
+   ],
+   "sequences": [
+    {"name": "claim_number_seq", "start": 10000001, "increment": 1}
+   ]
+  }
+ ]
+}

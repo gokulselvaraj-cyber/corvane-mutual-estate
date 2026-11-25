@@ -13,3 +13,4 @@ payments-gateway consumes `claims.approved.v1`, calls the ClearRiver Bank Payout
    committed offset is safe.
 4. If ClearRiver is down for more than 2 hours, tell the claims operations lead: customers are promised payment within
    3 working days.
+5. Before replaying, check the payment table for a SENT row for the claim: if one exists, ClearRiver already has the instruction.

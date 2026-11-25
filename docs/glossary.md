@@ -11,3 +11,4 @@
 | IPT | Insurance premium tax (UK): 12% standard, 20% higher rate | |
 | CLMI | The CICS claims inquiry transaction | |
 | PRMNIGHT | The nightly premium billing batch job | |
+| Claimant | The person making the claim; usually the policyholder, but a THIRD_PARTY in liability claims (PLB, motor third-party) | **Not** a synonym of policyholder |

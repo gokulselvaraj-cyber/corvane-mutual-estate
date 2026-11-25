@@ -1,0 +1,13 @@
+flowchart LR
+    %% J1 FNOL: portal to notification (documentary; the code is the source of truth)
+    PolicyLookup[FnolWizard PolicyLookup] --> IncidentDetails[IncidentDetails]
+    IncidentDetails --> DamageAndPhotos[DamageAndPhotos]
+    DamageAndPhotos --> Review[Review]
+    Review --> Submit[Submit]
+    Submit --> API[POST /v1/claims]
+    API --> Register[ClaimController.register]
+    Register --> Triage[TriageService.triage]
+    Triage --> Save[(claims.claim)]
+    Save --> Topic>claims.registered.v1]
+    Topic --> Notify[notifications ClaimRegisteredHandler]
+    Notify --> SMTP[SMTP smtp.corvane.internal]

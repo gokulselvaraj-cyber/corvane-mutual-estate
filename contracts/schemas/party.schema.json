@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.corvane.example/party.json",
+  "title": "Party",
+  "description": "A person on a claim: the policyholder, a third party, a witness or the payee. Same shape as claims.claim_party. Personal data.",
+  "type": "object",
+  "required": [
+    "role",
+    "fullName"
+  ],
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "POLICYHOLDER",
+        "THIRD_PARTY",
+        "WITNESS",
+        "PAYEE"
+      ]
+    },
+    "fullName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "description": "Personal data (name)."
+    },
+    "dateOfBirth": {
+      "type": "string",
+      "format": "date",
+      "description": "Personal data (date of birth)."
+    },
+    "nationalId": {
+      "type": "string",
+      "maxLength": 11,
+      "description": "Personal data: UK National Insurance number or US SSN. Optional at FNOL."
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 254
+    },
+    "phone": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "postcode": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "default": "GB"
+    }
+  },
+  "additionalProperties": false
+}

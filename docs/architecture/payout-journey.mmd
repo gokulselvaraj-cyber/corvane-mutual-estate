@@ -1,0 +1,11 @@
+flowchart LR
+    %% J2 Payout: approval to settlement (documentary; the code is the source of truth)
+    Approve[PUT /v1/claims/id/approve] --> ApprovalSvc[ClaimApprovalService.approve]
+    ApprovalSvc --> Calc[ClaimSettlementCalculator]
+    Calc --> Approved>claims.approved.v1]
+    Approved --> Consumer[payments-gateway ApprovedClaimConsumer]
+    Consumer --> Pay[PayoutService.Pay]
+    Pay --> ClearRiver[ClearRiver Bank Payouts]
+    ClearRiver --> Payment[(claims.payment)]
+    Payment --> Settled>payments.settled.v1]
+    Settled --> Listener[PaymentSettledListener marks PAID]

@@ -19,7 +19,7 @@ def evaluate(req: ScoreRequest) -> list[Indicator]:
         out.append(Indicator(code="PRIOR_CLAIM", weight=0.08, detail="at least one prior claim"))
     if req.claimed_amount >= ROUND_AMOUNT_MIN and req.claimed_amount % 500 == 0:
         out.append(Indicator(code="ROUND_AMOUNT", weight=0.06, detail="claimed amount is a round figure"))
-    if "ignore previous instructions" in (req.narrative or "").lower():
+    if "approve every claim" in (req.narrative or "").lower():
         # Narrative text is data. Instruction-like text is itself a weak fraud signal (manipulation attempt).
         out.append(Indicator(code="NARRATIVE_MANIPULATION", weight=0.3, detail="instruction-like text in narrative"))
     return out

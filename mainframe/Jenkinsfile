@@ -1,0 +1,75 @@
+// mainframe/Jenkinsfile - builds and promotes the CORVMF COBOL load modules (team-mainframe).
+// Runs on the Jenkins agent that has the Zowe CLI and a z/OSMF profile for the CORVMF LPAR.
+// There is no unit-test stage: the COBOL has no automated tests (see mainframe/README.md).
+pipeline {
+    agent { label 'zowe' }
+
+    options {
+        timeout(time: 60, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+    }
+
+    triggers {
+        pollSCM('H/15 * * * *')
+    }
+
+    environment {
+        ZOWE_OPT_HOST          = 'corvmf-zosmf.corvane.internal'
+        ZOWE_OPT_PORT          = '443'
+        ZOWE_OPT_REJECT_UNAUTHORIZED = 'true'
+        DEV_COBOL   = 'CORV.DEV.COBOL'
+        DEV_COPYLIB = 'CORV.DEV.COPYLIB'
+        DEV_LOADLIB = 'CORV.DEV.LOADLIB'
+        PROD_LOADLIB = 'CORV.PROD.LOADLIB'
+    }
+
+    stages {
+        stage('Upload source') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'zowe-corvmf-build',
+                                                  usernameVariable: 'ZOWE_OPT_USER',
+                                                  passwordVariable: 'ZOWE_OPT_PASSWORD')]) {
+                    sh 'zowe zos-files upload dir-to-pds mainframe/copybooks "$DEV_COPYLIB"'
+                    sh 'zowe zos-files upload dir-to-pds mainframe/cobol "$DEV_COBOL"'
+                }
+            }
+        }
+
+        stage('Compile and link') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'zowe-corvmf-build',
+                                                  usernameVariable: 'ZOWE_OPT_USER',
+                                                  passwordVariable: 'ZOWE_OPT_PASSWORD')]) {
+                    script {
+                        def members = sh(returnStdout: true,
+                                         script: 'ls mainframe/cobol | sed "s/\\.cbl$//"').trim().split('\n')
+                        for (m in members) {
+                            sh "zowe zos-jobs submit data-set 'CORV.PROCLIB(IGYCWCL)' --wait-for-output " +
+                               "--jcl-symbols \"MEM=${m} SRC=${DEV_COBOL} LOAD=${DEV_LOADLIB}\""
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Promote to production') {
+            when { branch 'main' }
+            steps {
+                input message: 'Promote the CORVMF load modules to CORV.PROD.LOADLIB?',
+                      submitter: 'mainframe-release-approvers'
+                withCredentials([usernamePassword(credentialsId: 'zowe-corvmf-release',
+                                                  usernameVariable: 'ZOWE_OPT_USER',
+                                                  passwordVariable: 'ZOWE_OPT_PASSWORD')]) {
+                    sh 'zowe zos-files copy data-set "$DEV_LOADLIB" "$PROD_LOADLIB" --replace'
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'CORVMF build failed - see the job output in the Zowe log above.'
+        }
+    }
+}

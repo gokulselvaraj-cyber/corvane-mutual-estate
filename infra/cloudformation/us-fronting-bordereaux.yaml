@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Corvane Mutual - S3 drop for the US fronting carrier's bordereaux. Holds US-written business only (the US rows of
+  the monthly reinsurance bordereau and the US premium summary). Deployed to us-east-1 in the finance AWS account;
+  no UK customer data is written here. Owner: team-platform-ops.
+
+Parameters:
+  FrontingCarrierAccountId:
+    Type: String
+    Description: AWS account id of the US fronting carrier, which reads the drop.
+    AllowedPattern: "^[0-9]{12}$"
+  RetentionDays:
+    Type: Number
+    Default: 2555
+    Description: Days to keep each bordereau (7 years).
+
+Rules:
+  OnlyUsEast1:
+    Assertions:
+      - Assert:
+          Fn::Equals:
+            - Ref: AWS::Region
+            - us-east-1
+        AssertDescription: The US fronting drop must live in us-east-1.
+
+Resources:
+  BordereauxKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encrypts the US fronting bordereaux drop.
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AccountAdmin
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+          - Sid: FrontingCarrierDecrypt
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${FrontingCarrierAccountId}:root
+            Action:
+              - kms:Decrypt
+            Resource: "*"
+
+  BordereauxBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: corvane-us-fronting-bordereaux
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID:
+                Ref: BordereauxKey
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-bordereaux
+            Status: Enabled
+            ExpirationInDays:
+              Ref: RetentionDays
+      Tags:
+        - Key: owner
+          Value: team-platform-ops
+        - Key: data-region
+          Value: us-only
+
+  BordereauxBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: BordereauxBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: FrontingCarrierRead
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${FrontingCarrierAccountId}:root
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${BordereauxBucket}
+              - Fn::Sub: arn:aws:s3:::${BordereauxBucket}/bordereaux/*
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${BordereauxBucket}
+              - Fn::Sub: arn:aws:s3:::${BordereauxBucket}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+Outputs:
+  BucketArn:
+    Value:
+      Fn::GetAtt: [BordereauxBucket, Arn]
