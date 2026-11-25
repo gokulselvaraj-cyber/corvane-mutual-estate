@@ -24,7 +24,7 @@ kind: Deployment
 metadata:
   name: payments-gateway
 spec:
-  replicas: 1
+  replicas: 2
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://java.sun.com/xml/ns/javaee" version="2.5">
-  <display-name>Corvane Claims v1</display-name>
-  <servlet><servlet-name>fnol</servlet-name><servlet-class>com.corvane.claimsv1.FnolServlet</servlet-class></servlet>
-  <servlet><servlet-name>approve</servlet-name><servlet-class>com.corvane.claimsv1.ApproveServlet</servlet-class></servlet>
-  <servlet-mapping><servlet-name>fnol</servlet-name><url-pattern>/claim/new</url-pattern></servlet-mapping>
-  <servlet-mapping><servlet-name>approve</servlet-name><url-pattern>/claim/approve</url-pattern></servlet-mapping>
-  <resource-ref><res-ref-name>jdbc/ClaimsDS</res-ref-name><res-type>javax.sql.DataSource</res-type></resource-ref>
-</web-app>

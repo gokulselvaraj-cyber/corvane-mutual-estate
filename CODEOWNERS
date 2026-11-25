@@ -4,6 +4,7 @@
 /services/policy-admin/             @corvane/policy-core
 /services/claims-service/           @corvane/claims-platform
 /services/fraud-scoring/            @corvane/fraud-analytics
+/services/payments-gateway/         @corvane/payments
 /services/notifications/            @corvane/digital
 /services/broker-commissions/       @corvane/distribution
 /services/warehouse-loader/         @corvane/data-platform

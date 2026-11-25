@@ -1,3 +1,12 @@
+/*
+ * Corvane Mutual - claims-service
+ * Owner: @corvane/claims-platform
+ * Triage rules are reviewed quarterly by Claims Governance (CG-Q4-2026).
+ * Change history lives in the service CHANGELOG; do not keep it here.
+ * The prod auto-approve limit is set in application-prod.yml, not in code.
+ * The default below applies to every other profile.
+ * Contact: claims-platform channel.
+ */
 package com.corvane.claims.service;
 
 import com.corvane.claims.domain.Claim;

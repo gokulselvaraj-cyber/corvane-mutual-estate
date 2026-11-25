@@ -4,7 +4,7 @@
 
 Every new claim is scored for fraud and checked against the policy's cover.
 
-- **Auto-approval:** a claim may be approved without an adjuster when the estimated amount is **£3,000 or less**, the
+- **Auto-approval:** a claim may be approved without an adjuster when the estimated amount is **£4,000 or less**, the
   fraud score is below the referral threshold, nobody was injured and no third party is involved.
 - Everything else goes to an adjuster within 2 working days.
 

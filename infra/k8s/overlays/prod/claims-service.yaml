@@ -13,4 +13,4 @@ spec:
         - name: FRAUD_SCORING_URL
           value: http://fraud-scoring:8080
         - name: CLAIMS_TRIAGE_AUTO_APPROVE_LIMIT
-          value: "5000"
+          value: "4000"

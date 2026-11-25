@@ -9,7 +9,7 @@ spec:
       - name: claims-service
         env:
         - name: POLICY_ADMIN_URL
-          value: http://policy-admin:8081
+          value: http://policy-admin:8080
         - name: FRAUD_SCORING_URL
           value: http://fraud-scoring:8080
         - name: CLAIMS_TRIAGE_AUTO_APPROVE_LIMIT
