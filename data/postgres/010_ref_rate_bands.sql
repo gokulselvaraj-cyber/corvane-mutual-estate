@@ -1,0 +1,56 @@
+-- dw.ref_rate_band: base rating bands by line of business.
+-- Generated from the same table as mainframe/cobol/RAT<line>01.cbl, so the two always agree.
+-- Used by finance to re-rate samples of the nightly billing.
+
+CREATE TABLE IF NOT EXISTS dw.ref_rate_band (
+    line_code       char(3) NOT NULL,
+    band            char(2) NOT NULL,
+    si_from         numeric(13,2) NOT NULL,
+    si_to           numeric(13,2) NOT NULL,
+    rate            numeric(8,5) NOT NULL,
+    min_premium     numeric(9,2) NOT NULL,
+    rating_program  varchar(8) NOT NULL,
+    PRIMARY KEY (line_code, band)
+);
+
+INSERT INTO dw.ref_rate_band (line_code, band, si_from, si_to, rate, min_premium, rating_program) VALUES
+  ('MTR', 'B1', 0, 8000, 0.05894, 145.00, 'RATMTR01'),
+  ('MTR', 'B2', 8000, 20000, 0.03580, 145.00, 'RATMTR01'),
+  ('MTR', 'B3', 20000, 45000, 0.02741, 145.00, 'RATMTR01'),
+  ('MTR', 'B4', 45000, 90000, 0.02726, 145.00, 'RATMTR01'),
+  ('HOM', 'B1', 0, 150000, 0.00273, 120.00, 'RATHOM01'),
+  ('HOM', 'B2', 150000, 350000, 0.00213, 120.00, 'RATHOM01'),
+  ('HOM', 'B3', 350000, 750000, 0.00213, 120.00, 'RATHOM01'),
+  ('HOM', 'B4', 750000, 1500000, 0.00205, 120.00, 'RATHOM01'),
+  ('CNT', 'B1', 0, 25000, 0.00617, 65.00, 'RATCNT01'),
+  ('CNT', 'B2', 25000, 60000, 0.00467, 65.00, 'RATCNT01'),
+  ('CNT', 'B3', 60000, 120000, 0.00354, 65.00, 'RATCNT01'),
+  ('TRV', 'B1', 0, 5000, 0.00832, 18.00, 'RATTRV01'),
+  ('TRV', 'B2', 5000, 10000, 0.00660, 18.00, 'RATTRV01'),
+  ('TRV', 'B3', 10000, 25000, 0.00583, 18.00, 'RATTRV01'),
+  ('PET', 'B1', 0, 2000, 0.07599, 60.00, 'RATPET01'),
+  ('PET', 'B2', 2000, 4000, 0.07182, 60.00, 'RATPET01'),
+  ('PET', 'B3', 4000, 7000, 0.05553, 60.00, 'RATPET01'),
+  ('PET', 'B4', 7000, 12000, 0.05141, 60.00, 'RATPET01'),
+  ('LLD', 'B1', 0, 200000, 0.00281, 160.00, 'RATLLD01'),
+  ('LLD', 'B2', 200000, 500000, 0.00126, 160.00, 'RATLLD01'),
+  ('LLD', 'B3', 500000, 1200000, 0.00117, 160.00, 'RATLLD01'),
+  ('MAR', 'B1', 0, 250000, 0.00359, 450.00, 'RATMAR01'),
+  ('MAR', 'B2', 250000, 1000000, 0.00313, 450.00, 'RATMAR01'),
+  ('MAR', 'B3', 1000000, 5000000, 0.00244, 450.00, 'RATMAR01'),
+  ('CPR', 'B1', 0, 500000, 0.00236, 350.00, 'RATCPR01'),
+  ('CPR', 'B2', 500000, 2000000, 0.00161, 350.00, 'RATCPR01'),
+  ('CPR', 'B3', 2000000, 10000000, 0.00104, 350.00, 'RATCPR01'),
+  ('PLB', 'B1', 0, 1000000, 0.00081, 140.00, 'RATPLB01'),
+  ('PLB', 'B2', 1000000, 2000000, 0.00057, 140.00, 'RATPLB01'),
+  ('PLB', 'B3', 2000000, 5000000, 0.00055, 140.00, 'RATPLB01'),
+  ('PLB', 'B4', 5000000, 10000000, 0.00029, 140.00, 'RATPLB01'),
+  ('PIN', 'B1', 0, 250000, 0.00559, 300.00, 'RATPIN01'),
+  ('PIN', 'B2', 250000, 1000000, 0.00363, 300.00, 'RATPIN01'),
+  ('PIN', 'B3', 1000000, 5000000, 0.00142, 300.00, 'RATPIN01'),
+  ('CYB', 'B1', 0, 250000, 0.01288, 400.00, 'RATCYB01'),
+  ('CYB', 'B2', 250000, 1000000, 0.01023, 400.00, 'RATCYB01'),
+  ('CYB', 'B3', 1000000, 3000000, 0.00795, 400.00, 'RATCYB01'),
+  ('GDG', 'B1', 0, 500, 0.12097, 36.00, 'RATGDG01'),
+  ('GDG', 'B2', 500, 1200, 0.10102, 36.00, 'RATGDG01'),
+  ('GDG', 'B3', 1200, 2500, 0.06462, 36.00, 'RATGDG01');

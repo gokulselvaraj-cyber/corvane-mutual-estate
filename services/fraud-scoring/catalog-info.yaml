@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: fraud-scoring
+  description: Scores new claims for fraud risk; optional LLM triage through the AI gateway.
+  annotations:
+    corvane.io/runbook: ops/runbooks/fraud-scoring.md
+  tags: [python, fastapi, fraud]
+spec:
+  type: service
+  lifecycle: production
+  owner: team-fraud-analytics
+  system: corvane-claims
+  providesApis: [fraud-scoring-api]
+  consumesApis: [ai-gateway-chat]
+  dependsOn: [resource:claimsdb, resource:kafka-claims]

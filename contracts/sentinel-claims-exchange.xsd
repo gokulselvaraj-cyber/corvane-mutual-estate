@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:sentinel:claims:v2"
+            xmlns:tns="urn:sentinel:claims:v2" elementFormDefault="qualified">
+  <xsd:simpleType name="ClaimStatus">
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="OPEN"/><xsd:enumeration value="SETTLED"/>
+      <xsd:enumeration value="WITHDRAWN"/><xsd:enumeration value="REPUDIATED"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+  <xsd:element name="SearchPriorClaims">
+    <xsd:complexType><xsd:sequence>
+      <xsd:element name="memberId" type="xsd:string"/>
+      <xsd:element name="surname" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="forename" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="dateOfBirth" type="xsd:date" minOccurs="0"/>
+      <xsd:element name="nationalId" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="postcode" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="vehicleRegistration" type="xsd:string" minOccurs="0"/>
+      <xsd:element name="lookbackYears" type="xsd:int" default="5"/>
+    </xsd:sequence></xsd:complexType>
+  </xsd:element>
+  <xsd:element name="SearchResult">
+    <xsd:complexType><xsd:sequence>
+      <xsd:element name="searchRef" type="xsd:string"/>
+      <xsd:element name="matchCount" type="xsd:int"/>
+      <xsd:element name="riskBand" type="xsd:string"/>
+      <xsd:element name="matches" minOccurs="0" maxOccurs="unbounded">
+        <xsd:complexType><xsd:sequence>
+          <xsd:element name="exchangeRef" type="xsd:string"/>
+          <xsd:element name="insurerCode" type="xsd:string"/>
+          <xsd:element name="lossType" type="xsd:string"/>
+          <xsd:element name="lossDate" type="xsd:date"/>
+          <xsd:element name="settledAmount" type="xsd:decimal"/>
+          <xsd:element name="status" type="tns:ClaimStatus"/>
+          <xsd:element name="matchScore" type="xsd:int"/>
+        </xsd:sequence></xsd:complexType>
+      </xsd:element>
+    </xsd:sequence></xsd:complexType>
+  </xsd:element>
+  <xsd:element name="UpdateClaimStatus">
+    <xsd:complexType><xsd:sequence>
+      <xsd:element name="memberId" type="xsd:string"/>
+      <xsd:element name="exchangeRef" type="xsd:string"/>
+      <xsd:element name="status" type="tns:ClaimStatus"/>
+    </xsd:sequence></xsd:complexType>
+  </xsd:element>
+  <xsd:element name="Ack"><xsd:complexType><xsd:attribute name="ok" type="xsd:boolean"/></xsd:complexType></xsd:element>
+</xsd:schema>

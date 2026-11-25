@@ -1,0 +1,5 @@
+Sentinel Exchange Ltd — SDK Licence Agreement v3 (summary)
+
+Copyright (c) 2021-2026 Sentinel Exchange Ltd. All rights reserved.
+This SDK is licensed, not sold, to exchange members for the sole purpose of calling the Sentinel Claims Exchange.
+You may not modify, sublicense or redistribute the SDK outside your organisation. Provided "as is" without warranty.

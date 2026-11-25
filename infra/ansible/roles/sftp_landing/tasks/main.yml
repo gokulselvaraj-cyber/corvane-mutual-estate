@@ -1,0 +1,25 @@
+- name: Create the mainframe transfer user
+  ansible.builtin.user:
+    name: "{{ mainframe_sftp_user }}"
+    shell: /usr/sbin/nologin
+    home: /landing
+
+- name: Create the billing landing folder
+  ansible.builtin.file:
+    path: /landing/billing
+    state: directory
+    owner: "{{ mainframe_sftp_user }}"
+    mode: "0750"
+
+- name: Chroot SFTP for the mainframe user
+  ansible.builtin.template:
+    src: sshd_landing.conf.j2
+    dest: /etc/ssh/sshd_config.d/landing.conf
+    mode: "0644"
+  notify: restart sshd
+
+- name: Sync landed files to the landing bucket every 5 minutes
+  ansible.builtin.cron:
+    name: landing-to-gcs
+    minute: "*/5"
+    job: "gsutil -m rsync /landing/billing gs://{{ landing_bucket }}/billing"

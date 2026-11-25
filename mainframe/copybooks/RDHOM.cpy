@@ -1,0 +1,22 @@
+000100*================================================================
+000200* RDHOM  HOME BUILDINGS RISK DETAIL
+000300*        THE 60-BYTE POL-RISK-DETAIL OF POLREC FOR LINE HOM.
+000400*        USED BY RATHOM01.
+000500*        policy-admin FILLS THE SAME 60 BYTES IN PRMCOMM
+000600*        REQ-RISK-DETAIL WHEN IT CALLS PRMCALC0.
+000700*
+000800*  BUILD-YEAR      YEAR THE PROPERTY WAS BUILT
+000900*  BEDROOMS        NUMBER OF BEDROOMS
+001000*  FLOOD-ZONE      1 LOW TO 3 HIGH (SEE postcodes-latin1.csv)
+001100*  SUBSIDENCE      Y = HISTORY OF SUBSIDENCE
+001200*  ROOF-TYPE       T TILE, S SLATE, F FLAT
+001300*  LISTED          Y = LISTED BUILDING
+001400*================================================================
+001500 01  WS-HOM-DETAIL.
+001600     05  WS-BUILD-YEAR            PIC 9(04).
+001700     05  WS-BEDROOMS              PIC 9(02).
+001800     05  WS-FLOOD-ZONE            PIC 9(01).
+001900     05  WS-SUBSIDENCE            PIC X(01).
+002000     05  WS-ROOF-TYPE             PIC X(01).
+002100     05  WS-LISTED                PIC X(01).
+002200     05  FILLER                  PIC X(50).

@@ -1,0 +1,108 @@
+{
+  "type": "record",
+  "name": "ClaimRegistered",
+  "namespace": "com.corvane.events",
+  "doc": "claims.registered.v1 from claims-service; read by notifications and fraud-scoring. Contains personal data (name, email, injury notes).",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "claimNumber",
+      "type": "string"
+    },
+    {
+      "name": "policyNumber",
+      "type": "string"
+    },
+    {
+      "name": "lineCode",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": "string"
+    },
+    {
+      "name": "triageOutcome",
+      "type": "string"
+    },
+    {
+      "name": "claimantName",
+      "type": "string"
+    },
+    {
+      "name": "claimantEmail",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "claimantMobile",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "postcode",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "lossDate",
+      "type": "string"
+    },
+    {
+      "name": "reportedDate",
+      "type": "string"
+    },
+    {
+      "name": "policyStartDate",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "claimedAmount",
+      "type": "string"
+    },
+    {
+      "name": "currency",
+      "type": "string"
+    },
+    {
+      "name": "lossCause",
+      "type": "string"
+    },
+    {
+      "name": "narrative",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "injuryNotes",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "occurredAt",
+      "type": "string"
+    }
+  ]
+}

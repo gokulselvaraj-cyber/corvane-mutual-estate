@@ -1,0 +1,15 @@
+# broker-commissions is built in Azure DevOps (distribution team's tenant) and pushed to the shared registry.
+trigger:
+  branches: {include: [main]}
+  paths: {include: [services/broker-commissions/*]}
+
+pool: {vmImage: ubuntu-22.04}
+
+steps:
+- task: UseDotNet@2
+  inputs: {packageType: sdk, version: 8.0.x}
+- script: dotnet test services/broker-commissions/Corvane.Commissions.Tests --configuration Release
+  displayName: Unit tests
+- script: |
+    docker build -t europe-west2-docker.pkg.dev/corvane-platform/apps/broker-commissions:$(Build.BuildId) services/broker-commissions
+  displayName: Image

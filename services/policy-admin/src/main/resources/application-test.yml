@@ -1,0 +1,7 @@
+policy:
+  premium-engine: java
+spring:
+  kafka:
+    bootstrap-servers: kafka.test.corvane.internal:9092
+ctg:
+  host: ctg.test.corvane.internal

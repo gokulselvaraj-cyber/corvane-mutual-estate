@@ -1,0 +1,31 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: policy-admin
+  description: Quotes, rates, binds and renews Corvane Mutual policies for all twelve product lines.
+  annotations:
+    corvane.io/runbook: ops/runbooks/policy-admin.md
+  tags: [java, spring-boot, monolith]
+spec:
+  type: service
+  lifecycle: production
+  owner: team-policy-core
+  system: corvane-insurance-platform
+  providesApis: [policy-admin-api]
+  consumesApis: [postcode-lookup-api]
+  dependsOn:
+    - resource:ledger-oracle
+    - resource:policy-postgres
+    - component:corvmf-premium-engine
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: policy-admin-api
+spec:
+  type: openapi
+  lifecycle: production
+  owner: team-policy-core
+  system: corvane-insurance-platform
+  definition:
+    $text: ../../contracts/policy-admin.openapi.yaml

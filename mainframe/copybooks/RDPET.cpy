@@ -1,0 +1,20 @@
+000100*================================================================
+000200* RDPET  PET RISK DETAIL
+000300*        THE 60-BYTE POL-RISK-DETAIL OF POLREC FOR LINE PET.
+000400*        USED BY RATPET01.
+000500*        policy-admin FILLS THE SAME 60 BYTES IN PRMCOMM
+000600*        REQ-RISK-DETAIL WHEN IT CALLS PRMCALC0.
+000700*
+000800*  SPECIES         D DOG, C CAT, R RABBIT
+000900*  BREED-BAND      BREED RISK BAND 1-5
+001000*  PET-AGE         AGE IN YEARS
+001100*  PRE-EXISTING    Y = DECLARED PRE-EXISTING CONDITION
+001200*  NEUTERED        Y = NEUTERED
+001300*================================================================
+001400 01  WS-PET-DETAIL.
+001500     05  WS-SPECIES               PIC X(01).
+001600     05  WS-BREED-BAND            PIC 9(01).
+001700     05  WS-PET-AGE               PIC 9(02).
+001800     05  WS-PRE-EXISTING          PIC X(01).
+001900     05  WS-NEUTERED              PIC X(01).
+002000     05  FILLER                  PIC X(54).

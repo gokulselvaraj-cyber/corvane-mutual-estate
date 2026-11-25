@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: corvane-env
+data:
+  profile: test
+  kafka.bootstrap: kafka-test.corvane.internal:9092
+  fraud.llm-triage.enabled: "true"
+  policy.premium-engine: java

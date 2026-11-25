@@ -1,0 +1,14 @@
+region,line_code,ipt_rate,effective_from,note
+UK,MTR,0.12,2017-06-01,standard rate
+UK,HOM,0.12,2017-06-01,standard rate
+UK,CNT,0.12,2017-06-01,standard rate
+UK,TRV,0.20,2017-06-01,higher rate
+UK,PET,0.12,2017-06-01,standard rate
+UK,LLD,0.12,2017-06-01,standard rate
+UK,MAR,0.00,2017-06-01,exempt (commercial marine)
+UK,CPR,0.12,2017-06-01,standard rate
+UK,PLB,0.12,2017-06-01,standard rate
+UK,PIN,0.12,2017-06-01,standard rate
+UK,CYB,0.12,2017-06-01,standard rate
+UK,GDG,0.20,2017-06-01,higher rate (mechanical breakdown and gadget)
+US,*,0.00,2023-11-01,state premium tax billed by the fronting carrier

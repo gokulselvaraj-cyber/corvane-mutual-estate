@@ -1,0 +1,8 @@
+claims:
+  triage:
+    # Raised from 2500 by CAB-2291 (claims ops, 2026-03) to cut adjuster queue length.
+    auto-approve-limit: 5000
+corvane:
+  fraud-scoring:
+    timeout-ms: 1200
+logging.level.root: INFO

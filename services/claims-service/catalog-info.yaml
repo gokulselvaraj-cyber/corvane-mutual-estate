@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: claims-service
+  description: FNOL, triage, approval and claim summary for Corvane Mutual
+  annotations:
+    corvane.io/runbook: ops/runbooks/claims-payout-failure.md
+  tags: [java, spring-boot, claims]
+spec:
+  type: service
+  lifecycle: production
+  owner: team-fnol
+  system: corvane-claims
+  providesApis: [claims-api, claims-events]
+  consumesApis: [policy-admin-api, fraud-scoring-api, sentinel-claims-exchange]
+  dependsOn:
+    - resource:claimsdb
+    - resource:corvane-claims-docs

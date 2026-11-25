@@ -1,0 +1,7 @@
+claims:
+  triage:
+    auto-approve-limit: 2500
+  bureau:
+    sentinel:
+      enabled: false
+logging.level.com.corvane.claims: DEBUG

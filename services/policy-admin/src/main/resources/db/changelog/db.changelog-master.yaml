@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-policy.yaml
+  - include:
+      file: db/changelog/changes/002-quote.yaml
+  - include:
+      file: db/changelog/changes/010-rating-factors.yaml

@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: Corvane policy-admin API
+  version: 4.12.0
+  description: Quote, bind and read policies. Owned by team-policy-core.
+servers:
+  - url: https://api.corvane.internal/policy
+security:
+  - bearerAuth: []
+paths:
+  /v1/quotes:
+    post:
+      operationId: createQuote
+      tags: [Quotes]
+      summary: Price a quote (J4). Roles CUSTOMER or BROKER.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuoteRequest' }
+      responses:
+        '201':
+          description: Priced quote, valid 30 days
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuoteResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+  /v1/policies/{policyNumber}:
+    get:
+      operationId: getPolicy
+      tags: [Policies]
+      summary: Read one policy. Used by claims-service during FNOL.
+      parameters:
+        - { name: policyNumber, in: path, required: true, schema: { type: string, pattern: '^[A-Z]{3}[0-9]{9}$' } }
+      responses:
+        '200':
+          description: The policy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyView' }
+        '404': { $ref: '#/components/responses/Problem' }
+  /v1/policies/{quoteId}/bind:
+    post:
+      operationId: bindQuote
+      tags: [Policies]
+      summary: Bind a quote into a policy; posts to the ledger and publishes policies.bound.v1.
+      parameters:
+        - { name: quoteId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BindRequest' }
+      responses:
+        '201':
+          description: Bound policy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyView' }
+        '409': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Problem:
+      description: RFC 7807 problem
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    ProductLine:
+      type: string
+      enum: [MTR, HOM, CNT, TRV, PET, LLD, MAR, CPR, PLB, PIN, CYB, GDG]
+    QuoteRequest:
+      type: object
+      required: [line, fullName, dateOfBirth, postcode, sumInsured]
+      properties:
+        line: { $ref: '#/components/schemas/ProductLine' }
+        fullName: { type: string }
+        dateOfBirth: { type: string, format: date }
+        postcode: { type: string, maxLength: 10 }
+        sumInsured: { type: number, minimum: 1 }
+        voluntaryExcess: { type: number, minimum: 0 }
+        priorClaims: { type: integer, minimum: 0 }
+        factors: { type: object, additionalProperties: { type: string } }
+    QuoteResponse:
+      type: object
+      properties:
+        quoteId: { type: string, format: uuid }
+        line: { $ref: '#/components/schemas/ProductLine' }
+        premium: { type: number }
+        ipt: { type: number, description: 'Insurance Premium Tax: 12% standard, 20% for TRV and GDG' }
+        total: { type: number }
+        excess: { type: number, description: 'Compulsory 250 + voluntary' }
+        referred: { type: boolean }
+        referralReason: { type: string, nullable: true }
+        validUntil: { type: string, format: date-time }
+    BindRequest:
+      type: object
+      properties:
+        inceptionDate: { type: string, format: date }
+        brokerCode: { type: string }
+    PolicyView:
+      type: object
+      properties:
+        policyNumber: { type: string }
+        line: { $ref: '#/components/schemas/ProductLine' }
+        status: { type: string, enum: [QUOTED, BOUND, LAPSED, CANCELLED, RENEWAL_DUE] }
+        partyRef: { type: string }
+        holderName: { type: string }
+        postcode: { type: string }
+        inceptionDate: { type: string, format: date }
+        expiryDate: { type: string, format: date }
+        annualPremium: { type: number }
+        voluntaryExcess: { type: number }
+        currency: { type: string }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

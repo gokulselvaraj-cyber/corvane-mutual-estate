@@ -1,0 +1,6 @@
+# Managed by Ansible ({{ ansible_managed }})
+Match User {{ mainframe_sftp_user }}
+    ChrootDirectory /landing
+    ForceCommand internal-sftp -d /billing
+    AllowTcpForwarding no
+    PasswordAuthentication no

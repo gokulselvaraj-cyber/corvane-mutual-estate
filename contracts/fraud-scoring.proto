@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+// Planned gRPC interface for fraud scoring (design review 2024-05). NOT IMPLEMENTED:
+// claims-service calls fraud-scoring over HTTP JSON (POST /v1/score).
+package corvane.fraud.v1;
+
+option java_package = "com.corvane.fraud.v1";
+
+service FraudScoring {
+  rpc Score (ScoreRequest) returns (ScoreReply);
+  rpc Explain (ExplainRequest) returns (ExplainReply);
+}
+
+message ScoreRequest {
+  string claim_number = 1;
+  string line_code = 2;
+  string loss_cause = 3;
+  double estimated_amount = 4;
+  string description = 5;
+  int32 prior_claims_3y = 6;
+}
+
+message ScoreReply {
+  double score = 1;
+  string band = 2;
+  repeated string reasons = 3;
+}
+
+message ExplainRequest { string claim_number = 1; }
+message ExplainReply { repeated string features = 1; }

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-scoring
+  labels: {app: fraud-scoring, team: fraud-analytics}
+spec:
+  replicas: 3
+  selector:
+    matchLabels: {app: fraud-scoring}
+  template:
+    metadata:
+      labels: {app: fraud-scoring, team: fraud-analytics}
+    spec:
+      serviceAccountName: fraud-scoring
+      containers:
+      - name: fraud-scoring
+        image: europe-west2-docker.pkg.dev/corvane-platform/apps/fraud-scoring:${IMAGE_TAG}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom: {configMapKeyRef: {name: corvane-env, key: profile}}
+        resources:
+          requests: {cpu: "1", memory: "2Gi"}
+          limits: {memory: "2Gi"}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          initialDelaySeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-scoring
+spec:
+  selector: {app: fraud-scoring}
+  ports:
+  - port: 8080
+    targetPort: 8080

@@ -1,0 +1,16 @@
+- name: Install Airflow worker
+  ansible.builtin.pip:
+    name: "apache-airflow[celery,google]=={{ airflow_version }}"
+    virtualenv: /opt/airflow/venv
+
+- name: Deploy DAGs from the warehouse-loader repo
+  ansible.builtin.git:
+    repo: "https://git.corvane.internal/data/warehouse-loader.git"
+    dest: /opt/airflow/dags/warehouse-loader
+    version: main
+
+- name: Airflow worker service
+  ansible.builtin.systemd:
+    name: airflow-worker
+    state: started
+    enabled: true

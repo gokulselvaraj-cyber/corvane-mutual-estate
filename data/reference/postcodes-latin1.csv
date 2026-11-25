@@ -1,0 +1,21 @@
+postcode,town,county_or_state,region,flood_zone,crime_band
+CV1 2AB,Abermôr,Ceredigion,UK,2,B
+CV2 9QF,Pen-y-Bryn Glân,Gwynedd,UK,1,A
+CV3 4LS,Llanfîr,Powys,UK,3,B
+CV4 7TD,Aberdâr Uchaf,Rhondda Cynon Taf,UK,2,C
+CV5 1HX,Trefîn Isaf,Pembrokeshire,UK,1,A
+CV6 3NP,Môn Newydd,Anglesey,UK,3,A
+CV7 8RW,Coed-y-Gâr,Conwy,UK,2,B
+CV8 5JE,Saint-Hélier Cove,Channel Coast,UK,2,B
+CV9 6YU,Glyn Ebwy Côr,Blaenau Gwent,UK,1,C
+CW1 4BB,Nant Ffrancôn,Gwynedd,UK,3,A
+CW2 2MM,Rhyd-y-Fôn,Ceredigion,UK,2,A
+CW3 9KD,Pontrhydfendigaid Fâch,Ceredigion,UK,1,A
+87532,Española Vieja,New Mexico,US,1,B
+81212,Cañon Rojo,Colorado,US,2,B
+95110,San José del Río,California,US,3,C
+87801,Socorro Peñasco,New Mexico,US,1,A
+33134,Coral Gáble Heights,Florida,US,3,C
+78205,Béxar Crossing,Texas,US,2,C
+70116,Faubourg Marigné,Louisiana,US,3,C
+04730,Houlton Ste-Agathe,Maine,US,1,A

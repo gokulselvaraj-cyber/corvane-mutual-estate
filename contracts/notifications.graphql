@@ -1,0 +1,21 @@
+# Read-only GraphQL view over notifications sent to a customer (portal "My messages").
+schema {
+  query: Query
+}
+
+type Query {
+  notifications(policyNumber: String!, limit: Int = 20): [Notification!]!
+  notification(id: ID!): Notification
+}
+
+enum Channel { EMAIL SMS }
+
+type Notification {
+  id: ID!
+  policyNumber: String!
+  claimNumber: String
+  channel: Channel!
+  template: String!
+  sentAt: String!
+  delivered: Boolean!
+}

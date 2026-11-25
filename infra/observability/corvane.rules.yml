@@ -1,0 +1,48 @@
+groups:
+- name: claims
+  rules:
+  - alert: ClaimsApiErrorRateHigh
+    expr: sum(rate(http_server_requests_seconds_count{app="claims-service",status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count{app="claims-service"}[5m])) > 0.02
+    for: 10m
+    labels: {severity: page, team: claims-platform}
+    annotations:
+      summary: Claims API 5xx rate above 2%
+      runbook: ops/runbooks/claims-api-errors.md
+  - alert: FraudScoringSlow
+    expr: histogram_quantile(0.95, sum(rate(fraud_score_seconds_bucket[5m])) by (le)) > 3
+    for: 15m
+    labels: {severity: ticket, team: fraud-analytics}
+    annotations:
+      summary: Fraud scoring p95 above 3 s (LLM triage latency)
+- name: payments
+  rules:
+  - alert: PayoutFailures
+    expr: increase(payouts_failed_total[15m]) > 5
+    labels: {severity: page, team: payments}
+    annotations:
+      summary: ClearRiver payouts failing
+      runbook: ops/runbooks/payout-failures.md
+  - alert: PaymentsGatewayDown
+    expr: up{app="payments-gateway"} == 0
+    for: 2m
+    labels: {severity: page, team: payments}
+    annotations:
+      summary: payments-gateway has no healthy pod (prod runs a single replica)
+- name: kafka
+  rules:
+  - alert: ConsumerLagHigh
+    expr: max(kafka_consumergroup_lag) by (consumergroup) > 5000
+    for: 10m
+    labels: {severity: ticket}
+    annotations:
+      runbook: ops/runbooks/kafka-lag.md
+- name: batch
+  rules:
+  - alert: BillingFileNotLanded
+    expr: time() - landing_last_file_timestamp_seconds{folder="billing"} > 4 * 3600
+    labels: {severity: page, team: mainframe}
+    annotations:
+      summary: No billing file from PRMNIGHT in 4 hours
+      runbook: ops/runbooks/prmnight-failure.md
+  - record: corvane:billing_rows_loaded:1d
+    expr: sum(increase(warehouse_rows_loaded_total{table="premium_billing"}[1d]))

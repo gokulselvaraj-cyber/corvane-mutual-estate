@@ -1,0 +1,56 @@
+{
+  "type": "record",
+  "name": "ClaimApproved",
+  "namespace": "com.corvane.events",
+  "doc": "claims.approved.v1 from claims-service; read by payments-gateway ApprovedClaimConsumer. Carries payee bank details.",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "claimNumber",
+      "type": "string"
+    },
+    {
+      "name": "approvalSeq",
+      "type": "int"
+    },
+    {
+      "name": "policyNumber",
+      "type": "string"
+    },
+    {
+      "name": "lineCode",
+      "type": "string"
+    },
+    {
+      "name": "payeeName",
+      "type": "string"
+    },
+    {
+      "name": "payeeSortCode",
+      "type": "string"
+    },
+    {
+      "name": "payeeAccount",
+      "type": "string"
+    },
+    {
+      "name": "settlementAmount",
+      "type": "string"
+    },
+    {
+      "name": "currency",
+      "type": "string"
+    },
+    {
+      "name": "approvedBy",
+      "type": "string"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string"
+    }
+  ]
+}

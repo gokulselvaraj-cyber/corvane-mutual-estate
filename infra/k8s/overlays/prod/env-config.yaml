@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: corvane-env
+data:
+  profile: prod
+  kafka.bootstrap: pkc-corvane-prod.europe-west2.gcp.confluent.cloud:9092
+  fraud.llm-triage.enabled: "true"
+  policy.premium-engine: mainframe

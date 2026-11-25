@@ -1,0 +1,28 @@
+{
+  "type": "record",
+  "name": "ClaimClosed",
+  "namespace": "com.corvane.events",
+  "doc": "claims.closed.v1",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "claimNumber",
+      "type": "string"
+    },
+    {
+      "name": "lineCode",
+      "type": "string"
+    },
+    {
+      "name": "paidAmount",
+      "type": "string"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string"
+    }
+  ]
+}

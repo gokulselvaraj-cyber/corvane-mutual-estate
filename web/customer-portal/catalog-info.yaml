@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: customer-portal
+  description: Customer-facing web portal (quotes, policy view, FNOL)
+  annotations:
+    github.com/project-slug: corvane/customer-portal
+spec:
+  type: website
+  lifecycle: production
+  owner: team-digital
+  system: corvane-insurance-platform
+  consumesApis:
+    - claims-api
+    - policy-admin-api
+    - postcode-lookup-api

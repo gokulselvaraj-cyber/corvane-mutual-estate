@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Corvane Claims API
+  version: 2.3.0
+  description: claims-service public API. Owner team-fnol.
+servers:
+  - url: https://api.corvane.internal/claims
+security:
+  - bearerAuth: []
+paths:
+  /v1/claims:
+    post:
+      operationId: registerClaim
+      summary: First notice of loss
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FnolRequest' }
+      responses:
+        '201': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/ClaimResponse' } } } }
+        '422': { description: Not covered }
+  /v1/claims/drafts:
+    post:
+      operationId: startDraft
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { policyNumber: { type: string } } }
+      responses:
+        '200': { description: Draft started }
+  /v1/claims/drafts/{id}/photos:
+    post:
+      operationId: addDraftPhoto
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { type: object, properties: { file: { type: string, format: binary } } }
+      responses:
+        '200': { description: Stored }
+  /v1/claims/{id}/approve:
+    put:
+      operationId: approveClaim
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApprovalRequest' }
+      responses:
+        '200': { description: Approved }
+        '409': { description: Claim not in REFERRED state }
+  /v1/claims/{id}/summary:
+    get:
+      operationId: getClaimSummary
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses:
+        '200': { description: Summary, content: { application/json: { schema: { $ref: '#/components/schemas/ClaimSummary' } } } }
+  /v1/claims/{id}/subrogate:
+    post:
+      operationId: subrogateClaim
+      summary: Open a recovery against a liable third party
+      parameters: [ { name: id, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { thirdPartyInsurer: { type: string } } }
+      responses:
+        '202': { description: Recovery opened }
+  /v1/claims/export:
+    get:
+      operationId: exportClaims
+      security: []
+      parameters: [ { name: days, in: query, schema: { type: integer, default: 30 } } ]
+      responses:
+        '200': { description: CSV, content: { text/csv: { schema: { type: string } } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    FnolRequest:
+      type: object
+      required: [policyNumber, incidentDate, lossCause, estimatedAmount]
+      properties:
+        policyNumber: { type: string, pattern: '^[A-Z]{3}-\d{8}$' }
+        incidentDate: { type: string, format: date }
+        lossCause: { type: string }
+        description: { type: string, maxLength: 4000 }
+        injuryNotes: { type: string, maxLength: 4000 }
+        estimatedAmount: { type: number }
+        incidentPostcode: { type: string }
+        draftId: { type: string, format: uuid }
+        payee: { $ref: '#/components/schemas/PayeeDetails' }
+    ClaimResponse:
+      type: object
+      properties:
+        claimId: { type: string, format: uuid }
+        claimNumber: { type: string }
+        status: { type: string, enum: [REGISTERED, REFERRED, APPROVED, PAID, CLOSED, DECLINED] }
+        triageOutcome: { type: string, enum: [AUTO_APPROVE, REFER_ADJUSTER, REFER_FRAUD] }
+        reserveAmount: { type: number }
+        registeredAt: { type: string, format: date-time }
+    ApprovalRequest:
+      type: object
+      required: [approvedAmount, payee]
+      properties:
+        approvedAmount: { type: number }
+        note: { type: string }
+        payee: { $ref: '#/components/schemas/PayeeDetails' }
+    PayeeDetails:
+      type: object
+      description: Bank details of the person paid (personal data); forwarded on claims.approved.v1.
+      required: [name, sortCode, account]
+      properties:
+        name: { type: string }
+        sortCode: { type: string, pattern: '^\d{2}-\d{2}-\d{2}$' }
+        account: { type: string, pattern: '^\d{8}$' }
+    ClaimSummary:
+      type: object
+      properties:
+        claimId: { type: string, format: uuid }
+        claimNumber: { type: string }
+        policyNumber: { type: string }
+        lineCode: { type: string }
+        status: { type: string }
+        claimantName: { type: string }
+        reserveAmount: { type: number }
+        paidAmount: { type: number }
+        fraudScore: { type: number }

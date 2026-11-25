@@ -1,0 +1,4 @@
+2026-11-15T10:02:11.118Z INFO  Started ClaimsServiceApplication in 14.2 seconds (profile=test)
+2026-11-15T10:05:40.551Z ERROR PolicyAdminClient getPolicy failed policy=CVM-HOM-0031177 url=http://policy-admin:8081/v1/policies/CVM-HOM-0031177 error=Connection refused
+2026-11-15T10:05:40.553Z WARN  POST /v1/claims returned 503 (policy lookup unavailable)
+2026-11-15T10:06:02.900Z ERROR PolicyAdminClient getPolicy failed policy=CVM-MTR-0012345 url=http://policy-admin:8081/v1/policies/CVM-MTR-0012345 error=Connection refused

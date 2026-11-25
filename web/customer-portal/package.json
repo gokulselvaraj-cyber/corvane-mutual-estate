@@ -1,0 +1,28 @@
+{
+  "name": "@corvane/customer-portal",
+  "version": "3.8.2",
+  "private": true,
+  "description": "Corvane Mutual customer portal: quotes, policy view and first notice of loss (FNOL)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.26.2",
+    "@corvane/policy-client": "file:../../generated/policy-client-ts",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.0.1",
+    "@types/react": "18.3.5",
+    "@vitejs/plugin-react": "4.3.1",
+    "typescript": "5.5.4",
+    "vite": "5.4.6",
+    "vitest": "2.1.1",
+    "eslint": "8.57.0"
+  }
+}

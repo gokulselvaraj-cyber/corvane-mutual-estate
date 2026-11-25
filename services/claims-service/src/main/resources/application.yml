@@ -1,0 +1,57 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: claims-service
+  datasource:
+    url: jdbc:postgresql://${CLAIMS_DB_HOST:claimsdb}:5432/claimsdb?currentSchema=claims
+    username: ${CLAIMS_DB_USER}
+    password: ${CLAIMS_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate.ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:kafka:9092}
+    consumer:
+      group-id: claims-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.corvane.internal
+corvane:
+  policy-admin:
+    url: ${POLICY_ADMIN_URL:http://policy-admin:8080}
+  fraud-scoring:
+    url: ${FRAUD_SCORING_URL:http://fraud-scoring:8000}
+    timeout-ms: 1500
+  documents:
+    bucket: corvane-claims-docs
+claims:
+  triage:
+    # Default kept equal to the code default in TriageService; prod overrides it.
+    auto-approve-limit: 2500
+    refer-fraud-score: 0.72
+  bureau:
+    sentinel:
+      enabled: true
+      endpoint: https://soap.sentinel-exchange.example/ClaimsExchange
+      member-id: ${SENTINEL_MEMBER_ID}
+      api-key: ${SENTINEL_API_KEY}
+  topics:
+    registered: claims.registered.v1
+    approved: claims.approved.v1
+    closed: claims.closed.v1
+    payments-settled: payments.settled.v1
+resilience4j:
+  circuitbreaker:
+    instances:
+      fraudScoring: { failureRateThreshold: 50, waitDurationInOpenState: 30s, slidingWindowSize: 20 }
+      policyAdmin: { failureRateThreshold: 50, waitDurationInOpenState: 20s, slidingWindowSize: 20 }
+      sentinel: { failureRateThreshold: 40, waitDurationInOpenState: 60s, slidingWindowSize: 10 }
+  retry:
+    instances:
+      policyAdmin: { maxAttempts: 3, waitDuration: 200ms }
+management:
+  endpoints.web.exposure.include: health,info,prometheus
+  endpoint.health.probes.enabled: true

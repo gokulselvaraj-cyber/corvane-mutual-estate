@@ -1,0 +1,30 @@
+# Batch calendar. Mainframe jobs run under the CA-7 scheduler; the rest under Airflow or Kubernetes CronJobs.
+timezone: Europe/London
+jobs:
+  - name: PRMNIGHT
+    system: mainframe
+    cron: "30 1 * * 1-6"        # 01:30 Monday to Saturday
+    owner: team-mainframe
+    output: CORV.PRM.BILLING.DAILY
+  - name: CLMDAILY
+    system: mainframe
+    cron: "0 23 * * *"
+    owner: team-mainframe
+  - name: PRMMONTH
+    system: mainframe
+    cron: "0 3 1 * *"
+    owner: team-mainframe
+  - name: premium_billing_load
+    system: airflow
+    cron: "0 4 * * 1-6"         # after PRMNIGHT lands
+    owner: team-data-platform
+    depends_on: PRMNIGHT
+  - name: purge_expired_claims
+    system: postgres-cron
+    cron: "0 2 * * 0"
+    owner: team-claims-platform
+    calls: claims.purge_expired_claims()
+  - name: monthly_commission_statements
+    system: kubernetes-cronjob
+    cron: "0 6 2 * *"
+    owner: team-distribution

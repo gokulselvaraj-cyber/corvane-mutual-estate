@@ -1,0 +1,4 @@
+Write a plain-English letter from Corvane Mutual to {policyholder_name} at {address_line_1}, {postcode}
+about claim {claim_id}. Outcome: {outcome}. Amount: {settlement_amount} {currency} after an excess of
+{excess_amount} {currency}. If declined, quote the policy wording: "{policy_wording}".
+Tone: warm, clear, no jargon. Sign off as {adjuster_name}, Claims Team. Max 250 words.

@@ -1,0 +1,17 @@
+sequenceDiagram
+    participant P as customer-portal
+    participant C as claims-service
+    participant A as policy-admin
+    participant F as fraud-scoring
+    participant K as Kafka
+    participant N as notifications
+    P->>C: POST /v1/claims/drafts
+    P->>C: POST /v1/claims/drafts/{id}/photos
+    P->>C: POST /v1/claims
+    C->>A: GET /v1/policies/{policyNumber}
+    C->>F: gRPC FraudScoring.ScoreClaim
+    F-->>C: score, reasons
+    C->>C: TriageService.triage (auto-approve or adjuster)
+    C->>K: claims.registered.v1
+    K->>N: ClaimRegisteredHandler
+    N-->>P: email confirmation

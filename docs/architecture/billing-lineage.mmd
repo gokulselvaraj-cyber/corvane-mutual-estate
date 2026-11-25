@@ -1,0 +1,11 @@
+flowchart LR
+    POLMAST[(VSAM CORV.POLMAST)] --> PRMEXTR[STEP010 PRMEXTR]
+    PRMEXTR --> PRMCALC[STEP020 PRMCALC]
+    PRMCALC --> PRMBILL[STEP030 PRMBILL]
+    PRMBILL --> FILE[/CORV.PRM.BILLING.DAILY/]
+    FILE --> SFTP[STEP040 SFTP to /landing/billing/]
+    SFTP --> DAG[Airflow premium_billing_load 04:00]
+    DAG --> STAGE[(dw.premium_billing_stage)]
+    STAGE --> MERGE[dw.fn_merge_billing]
+    MERGE --> BILL[(dw.premium_billing)]
+    BILL --> VIEW[[dw.v_premium_by_line]]

@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: warehouse-loader
+  description: Loads the mainframe premium billing file and closed claims into the dw schema.
+spec:
+  type: service
+  lifecycle: production
+  owner: team-data-platform
+  system: corvane-data
+  dependsOn: [resource:claimsdb, resource:kafka-claims]

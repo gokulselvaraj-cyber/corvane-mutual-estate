@@ -1,0 +1,28 @@
+{
+  "type": "record",
+  "name": "PaymentSettled",
+  "namespace": "com.corvane.events",
+  "doc": "payments.settled.v1 from payments-gateway; read by claims-service PaymentSettledListener.",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "paymentRef",
+      "type": "string"
+    },
+    {
+      "name": "amount",
+      "type": "string"
+    },
+    {
+      "name": "currency",
+      "type": "string"
+    },
+    {
+      "name": "settledAt",
+      "type": "string"
+    }
+  ]
+}

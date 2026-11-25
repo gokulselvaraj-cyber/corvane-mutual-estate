@@ -1,0 +1,15 @@
+{
+  "name": "@corvane/policy-client",
+  "version": "4.12.0",
+  "description": "Generated client for the Corvane policy-admin API. DO NOT EDIT.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "generate": "openapi-generator-cli generate -i ../../contracts/policy-admin.openapi.yaml -g typescript-fetch -o .",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "2.13.4",
+    "typescript": "5.4.5"
+  }
+}

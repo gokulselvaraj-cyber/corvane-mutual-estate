@@ -1,0 +1,1046 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-rating-factor-table
+      author: policy-core
+      changes:
+        - createTable:
+            tableName: rating_factor
+            remarks: "Mirror of the Java factor maps, read by the underwriting console"
+            columns:
+              - column: { name: line_code, type: CHAR(3), constraints: { nullable: false } }
+              - column: { name: factor, type: VARCHAR(40), constraints: { nullable: false } }
+              - column: { name: option_value, type: VARCHAR(40), constraints: { nullable: false } }
+              - column: { name: loading, type: DECIMAL(5,2), constraints: { nullable: false } }
+  - changeSet:
+      id: 010-factors-mtr
+      author: rating-workbook-export
+      comment: "Motor factor loadings from RW-MTR-2026Q3 (rate 20.945/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: vehicleGroup }
+              - column: { name: option_value, value: "1-10" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: vehicleGroup }
+              - column: { name: option_value, value: "11-20" }
+              - column: { name: loading, valueNumeric: 1.41 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: vehicleGroup }
+              - column: { name: option_value, value: "21-30" }
+              - column: { name: loading, valueNumeric: 1.72 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: vehicleGroup }
+              - column: { name: option_value, value: "31-40" }
+              - column: { name: loading, valueNumeric: 1.58 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: vehicleGroup }
+              - column: { name: option_value, value: "41-50" }
+              - column: { name: loading, valueNumeric: 1.05 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: annualMileage }
+              - column: { name: option_value, value: "<5k" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: annualMileage }
+              - column: { name: option_value, value: "5-10k" }
+              - column: { name: loading, valueNumeric: 1.28 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: annualMileage }
+              - column: { name: option_value, value: "10-15k" }
+              - column: { name: loading, valueNumeric: 1.3 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: annualMileage }
+              - column: { name: option_value, value: ">15k" }
+              - column: { name: loading, valueNumeric: 0.93 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: overnight }
+              - column: { name: option_value, value: "garage" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: overnight }
+              - column: { name: option_value, value: "driveway" }
+              - column: { name: loading, valueNumeric: 1.31 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: overnight }
+              - column: { name: option_value, value: "street" }
+              - column: { name: loading, valueNumeric: 1.03 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: use }
+              - column: { name: option_value, value: "social" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: use }
+              - column: { name: option_value, value: "commuting" }
+              - column: { name: loading, valueNumeric: 1.05 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MTR }
+              - column: { name: factor, value: use }
+              - column: { name: option_value, value: "business" }
+              - column: { name: loading, valueNumeric: 1.44 }
+  - changeSet:
+      id: 010-factors-hom
+      author: rating-workbook-export
+      comment: "Home buildings factor loadings from RW-HOM-2026Q3 (rate 0.905/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: buildYear }
+              - column: { name: option_value, value: "pre-1900" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: buildYear }
+              - column: { name: option_value, value: "1900-1945" }
+              - column: { name: loading, valueNumeric: 0.93 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: buildYear }
+              - column: { name: option_value, value: "1946-1990" }
+              - column: { name: loading, valueNumeric: 1.01 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: buildYear }
+              - column: { name: option_value, value: "post-1990" }
+              - column: { name: loading, valueNumeric: 1.49 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: floodZone }
+              - column: { name: option_value, value: "1" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: floodZone }
+              - column: { name: option_value, value: "2" }
+              - column: { name: loading, valueNumeric: 1.12 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: floodZone }
+              - column: { name: option_value, value: "3" }
+              - column: { name: loading, valueNumeric: 1.27 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: roof }
+              - column: { name: option_value, value: "tile" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: roof }
+              - column: { name: option_value, value: "slate" }
+              - column: { name: loading, valueNumeric: 1.07 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: roof }
+              - column: { name: option_value, value: "flat" }
+              - column: { name: loading, valueNumeric: 1.23 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: roof }
+              - column: { name: option_value, value: "thatch" }
+              - column: { name: loading, valueNumeric: 0.93 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: listed }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: listed }
+              - column: { name: option_value, value: "grade II" }
+              - column: { name: loading, valueNumeric: 1.41 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: HOM }
+              - column: { name: factor, value: listed }
+              - column: { name: option_value, value: "grade I" }
+              - column: { name: loading, valueNumeric: 1.5 }
+  - changeSet:
+      id: 010-factors-cnt
+      author: rating-workbook-export
+      comment: "Home contents factor loadings from RW-CNT-2026Q3 (rate 4.258/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: locks }
+              - column: { name: option_value, value: "BS3621" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: locks }
+              - column: { name: option_value, value: "other" }
+              - column: { name: loading, valueNumeric: 1.03 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: alarm }
+              - column: { name: option_value, value: "monitored" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: alarm }
+              - column: { name: option_value, value: "bells-only" }
+              - column: { name: loading, valueNumeric: 1.5 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: alarm }
+              - column: { name: option_value, value: "none" }
+              - column: { name: loading, valueNumeric: 1.43 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: occupancy }
+              - column: { name: option_value, value: "owner" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: occupancy }
+              - column: { name: option_value, value: "tenant" }
+              - column: { name: loading, valueNumeric: 1.52 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CNT }
+              - column: { name: factor, value: occupancy }
+              - column: { name: option_value, value: "student" }
+              - column: { name: loading, valueNumeric: 1.44 }
+  - changeSet:
+      id: 010-factors-trv
+      author: rating-workbook-export
+      comment: "Travel factor loadings from RW-TRV-2026Q3 (rate 11.255/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: region }
+              - column: { name: option_value, value: "UK" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: region }
+              - column: { name: option_value, value: "Europe" }
+              - column: { name: loading, valueNumeric: 1.26 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: region }
+              - column: { name: option_value, value: "Worldwide-ex-USA" }
+              - column: { name: loading, valueNumeric: 1.56 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: region }
+              - column: { name: option_value, value: "Worldwide" }
+              - column: { name: loading, valueNumeric: 1.88 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: tripType }
+              - column: { name: option_value, value: "single" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: tripType }
+              - column: { name: option_value, value: "annual" }
+              - column: { name: loading, valueNumeric: 1.5 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: winterSports }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: winterSports }
+              - column: { name: option_value, value: "yes" }
+              - column: { name: loading, valueNumeric: 1.37 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: medicalConditions }
+              - column: { name: option_value, value: "none" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: medicalConditions }
+              - column: { name: option_value, value: "declared" }
+              - column: { name: loading, valueNumeric: 1.63 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: TRV }
+              - column: { name: factor, value: medicalConditions }
+              - column: { name: option_value, value: "undeclared" }
+              - column: { name: loading, valueNumeric: 1.15 }
+  - changeSet:
+      id: 010-factors-pet
+      author: rating-workbook-export
+      comment: "Pet factor loadings from RW-PET-2026Q3 (rate 29.175/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: species }
+              - column: { name: option_value, value: "dog" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: species }
+              - column: { name: option_value, value: "cat" }
+              - column: { name: loading, valueNumeric: 1.59 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: species }
+              - column: { name: option_value, value: "rabbit" }
+              - column: { name: loading, valueNumeric: 1.42 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: breedGroup }
+              - column: { name: option_value, value: "crossbreed" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: breedGroup }
+              - column: { name: option_value, value: "pedigree" }
+              - column: { name: loading, valueNumeric: 1.56 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: breedGroup }
+              - column: { name: option_value, value: "dangerous-dogs-act" }
+              - column: { name: loading, valueNumeric: 1.25 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: cover }
+              - column: { name: option_value, value: "accident" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: cover }
+              - column: { name: option_value, value: "time-limited" }
+              - column: { name: loading, valueNumeric: 1.79 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: cover }
+              - column: { name: option_value, value: "lifetime" }
+              - column: { name: loading, valueNumeric: 1.52 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: neutered }
+              - column: { name: option_value, value: "yes" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PET }
+              - column: { name: factor, value: neutered }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.29 }
+  - changeSet:
+      id: 010-factors-lld
+      author: rating-workbook-export
+      comment: "Landlord factor loadings from RW-LLD-2026Q3 (rate 2.305/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: tenantType }
+              - column: { name: option_value, value: "professional" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: tenantType }
+              - column: { name: option_value, value: "student" }
+              - column: { name: loading, valueNumeric: 1.6 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: tenantType }
+              - column: { name: option_value, value: "DSS" }
+              - column: { name: loading, valueNumeric: 1.21 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: tenantType }
+              - column: { name: option_value, value: "holiday-let" }
+              - column: { name: loading, valueNumeric: 1.16 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: units }
+              - column: { name: option_value, value: "1" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: units }
+              - column: { name: option_value, value: "2-4" }
+              - column: { name: loading, valueNumeric: 1.05 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: units }
+              - column: { name: option_value, value: "5+" }
+              - column: { name: loading, valueNumeric: 0.96 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: unoccupiedDays }
+              - column: { name: option_value, value: "0-30" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: unoccupiedDays }
+              - column: { name: option_value, value: "31-60" }
+              - column: { name: loading, valueNumeric: 1.8 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: LLD }
+              - column: { name: factor, value: unoccupiedDays }
+              - column: { name: option_value, value: "60+" }
+              - column: { name: loading, valueNumeric: 1.44 }
+  - changeSet:
+      id: 010-factors-mar
+      author: rating-workbook-export
+      comment: "Marine cargo factor loadings from RW-MAR-2026Q3 (rate 1.299/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: conveyance }
+              - column: { name: option_value, value: "container-ship" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: conveyance }
+              - column: { name: option_value, value: "bulk" }
+              - column: { name: loading, valueNumeric: 1.06 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: conveyance }
+              - column: { name: option_value, value: "air" }
+              - column: { name: loading, valueNumeric: 1.39 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: conveyance }
+              - column: { name: option_value, value: "road" }
+              - column: { name: loading, valueNumeric: 1.81 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: commodity }
+              - column: { name: option_value, value: "general" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: commodity }
+              - column: { name: option_value, value: "perishable" }
+              - column: { name: loading, valueNumeric: 1.04 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: commodity }
+              - column: { name: option_value, value: "hazardous" }
+              - column: { name: loading, valueNumeric: 0.81 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: commodity }
+              - column: { name: option_value, value: "fine-art" }
+              - column: { name: loading, valueNumeric: 1.13 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: route }
+              - column: { name: option_value, value: "intra-EU" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: route }
+              - column: { name: option_value, value: "transatlantic" }
+              - column: { name: loading, valueNumeric: 1.89 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: route }
+              - column: { name: option_value, value: "Asia-Europe" }
+              - column: { name: loading, valueNumeric: 1.62 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: MAR }
+              - column: { name: factor, value: route }
+              - column: { name: option_value, value: "high-risk-waters" }
+              - column: { name: loading, valueNumeric: 1.1 }
+  - changeSet:
+      id: 010-factors-cpr
+      author: rating-workbook-export
+      comment: "Commercial property factor loadings from RW-CPR-2026Q3 (rate 2.434/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: construction }
+              - column: { name: option_value, value: "standard" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: construction }
+              - column: { name: option_value, value: "composite-panel" }
+              - column: { name: loading, valueNumeric: 1.82 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: construction }
+              - column: { name: option_value, value: "timber-frame" }
+              - column: { name: loading, valueNumeric: 1.67 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: sprinklers }
+              - column: { name: option_value, value: "yes" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: sprinklers }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.26 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "office" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "retail" }
+              - column: { name: loading, valueNumeric: 1.24 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "warehouse" }
+              - column: { name: loading, valueNumeric: 1.18 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "manufacturing" }
+              - column: { name: loading, valueNumeric: 1.75 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CPR }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "food-processing" }
+              - column: { name: loading, valueNumeric: 1.69 }
+  - changeSet:
+      id: 010-factors-plb
+      author: rating-workbook-export
+      comment: "Public liability factor loadings from RW-PLB-2026Q3 (rate 3.308/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "consultant" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "retail" }
+              - column: { name: loading, valueNumeric: 1.21 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "hospitality" }
+              - column: { name: loading, valueNumeric: 1.24 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "construction" }
+              - column: { name: loading, valueNumeric: 1.82 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: trade }
+              - column: { name: option_value, value: "events" }
+              - column: { name: loading, valueNumeric: 1.88 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: turnoverBand }
+              - column: { name: option_value, value: "<250k" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: turnoverBand }
+              - column: { name: option_value, value: "250k-1m" }
+              - column: { name: loading, valueNumeric: 1.56 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: turnoverBand }
+              - column: { name: option_value, value: "1m-5m" }
+              - column: { name: loading, valueNumeric: 0.86 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: turnoverBand }
+              - column: { name: option_value, value: ">5m" }
+              - column: { name: loading, valueNumeric: 1.48 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: workAtHeight }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: workAtHeight }
+              - column: { name: option_value, value: "under-10m" }
+              - column: { name: loading, valueNumeric: 1.55 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PLB }
+              - column: { name: factor, value: workAtHeight }
+              - column: { name: option_value, value: "over-10m" }
+              - column: { name: loading, valueNumeric: 1.18 }
+  - changeSet:
+      id: 010-factors-pin
+      author: rating-workbook-export
+      comment: "Professional indemnity factor loadings from RW-PIN-2026Q3 (rate 5.56/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: profession }
+              - column: { name: option_value, value: "IT-consultant" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: profession }
+              - column: { name: option_value, value: "architect" }
+              - column: { name: loading, valueNumeric: 1.1 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: profession }
+              - column: { name: option_value, value: "accountant" }
+              - column: { name: loading, valueNumeric: 1.78 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: profession }
+              - column: { name: option_value, value: "solicitor" }
+              - column: { name: loading, valueNumeric: 1.22 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: profession }
+              - column: { name: option_value, value: "financial-adviser" }
+              - column: { name: loading, valueNumeric: 1.76 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: feeIncomeBand }
+              - column: { name: option_value, value: "<100k" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: feeIncomeBand }
+              - column: { name: option_value, value: "100k-500k" }
+              - column: { name: loading, valueNumeric: 1.81 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: feeIncomeBand }
+              - column: { name: option_value, value: "500k-2m" }
+              - column: { name: loading, valueNumeric: 1.26 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: feeIncomeBand }
+              - column: { name: option_value, value: ">2m" }
+              - column: { name: loading, valueNumeric: 0.97 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: usWork }
+              - column: { name: option_value, value: "none" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: usWork }
+              - column: { name: option_value, value: "<10%" }
+              - column: { name: loading, valueNumeric: 1.48 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: PIN }
+              - column: { name: factor, value: usWork }
+              - column: { name: option_value, value: ">10%" }
+              - column: { name: loading, valueNumeric: 1.61 }
+  - changeSet:
+      id: 010-factors-cyb
+      author: rating-workbook-export
+      comment: "Cyber factor loadings from RW-CYB-2026Q3 (rate 6.49/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: mfa }
+              - column: { name: option_value, value: "all-users" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: mfa }
+              - column: { name: option_value, value: "admins-only" }
+              - column: { name: loading, valueNumeric: 1.39 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: mfa }
+              - column: { name: option_value, value: "none" }
+              - column: { name: loading, valueNumeric: 1.61 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: backups }
+              - column: { name: option_value, value: "offline-tested" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: backups }
+              - column: { name: option_value, value: "online-only" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: backups }
+              - column: { name: option_value, value: "none" }
+              - column: { name: loading, valueNumeric: 1.55 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: recordsHeld }
+              - column: { name: option_value, value: "<10k" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: recordsHeld }
+              - column: { name: option_value, value: "10k-100k" }
+              - column: { name: loading, valueNumeric: 1.53 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: recordsHeld }
+              - column: { name: option_value, value: ">100k" }
+              - column: { name: loading, valueNumeric: 0.87 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: sector }
+              - column: { name: option_value, value: "professional" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: sector }
+              - column: { name: option_value, value: "retail" }
+              - column: { name: loading, valueNumeric: 0.83 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: sector }
+              - column: { name: option_value, value: "healthcare" }
+              - column: { name: loading, valueNumeric: 0.86 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: CYB }
+              - column: { name: factor, value: sector }
+              - column: { name: option_value, value: "education" }
+              - column: { name: loading, valueNumeric: 1.03 }
+  - changeSet:
+      id: 010-factors-gdg
+      author: rating-workbook-export
+      comment: "Gadget factor loadings from RW-GDG-2026Q3 (rate 84.468/1000)"
+      changes:
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: device }
+              - column: { name: option_value, value: "phone" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: device }
+              - column: { name: option_value, value: "laptop" }
+              - column: { name: loading, valueNumeric: 1.3 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: device }
+              - column: { name: option_value, value: "tablet" }
+              - column: { name: loading, valueNumeric: 0.93 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: device }
+              - column: { name: option_value, value: "wearable" }
+              - column: { name: loading, valueNumeric: 1.88 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: device }
+              - column: { name: option_value, value: "console" }
+              - column: { name: loading, valueNumeric: 1.24 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: age }
+              - column: { name: option_value, value: "new" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: age }
+              - column: { name: option_value, value: "<1y" }
+              - column: { name: loading, valueNumeric: 0.84 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: age }
+              - column: { name: option_value, value: "1-2y" }
+              - column: { name: loading, valueNumeric: 1.19 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: age }
+              - column: { name: option_value, value: ">2y" }
+              - column: { name: loading, valueNumeric: 1.54 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: theftCover }
+              - column: { name: option_value, value: "yes" }
+              - column: { name: loading, valueNumeric: 1.0 }
+        - insert:
+            tableName: rating_factor
+            columns:
+              - column: { name: line_code, value: GDG }
+              - column: { name: factor, value: theftCover }
+              - column: { name: option_value, value: "no" }
+              - column: { name: loading, valueNumeric: 1.55 }

@@ -1,0 +1,35 @@
+asyncapi: 2.6.0
+info:
+  title: Corvane claims and payments events
+  version: 1.4.0
+servers:
+  confluent:
+    url: pkc-corvane.europe-west2.gcp.confluent.cloud:9092
+    protocol: kafka-secure
+channels:
+  policies.bound.v1:
+    description: A policy was bound. Producer policy-admin; consumers broker-commissions, notifications.
+    subscribe: { message: { $ref: '#/components/messages/PolicyBound' } }
+  claims.registered.v1:
+    description: A claim was registered (FNOL). Producer claims-service; consumers notifications, fraud-scoring.
+    subscribe: { message: { $ref: '#/components/messages/ClaimRegistered' } }
+  claims.approved.v1:
+    description: A claim was approved for payment. Producer claims-service; consumer payments-gateway.
+    subscribe: { message: { $ref: '#/components/messages/ClaimApproved' } }
+  payments.settled.v1:
+    description: The bank settled a payout. Producer payments-gateway; consumer claims-service.
+    subscribe: { message: { $ref: '#/components/messages/PaymentSettled' } }
+  claims.closed.v1:
+    description: A claim was closed. Producer claims-service; consumer warehouse-loader.
+    subscribe: { message: { $ref: '#/components/messages/ClaimClosed' } }
+  claims.reopened.v1:
+    description: A closed claim was reopened. Reserved for the reopen feature (CLM-REOPEN); no producer yet.
+    subscribe: { message: { $ref: '#/components/messages/ClaimReopened' } }
+components:
+  messages:
+    PolicyBound: { payload: { $ref: 'avro/policy-bound.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }
+    ClaimRegistered: { payload: { $ref: 'avro/claim-registered.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }
+    ClaimApproved: { payload: { $ref: 'avro/claim-approved.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }
+    PaymentSettled: { payload: { $ref: 'avro/payment-settled.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }
+    ClaimClosed: { payload: { $ref: 'avro/claim-closed.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }
+    ClaimReopened: { payload: { $ref: 'avro/claim-reopened.avsc' }, schemaFormat: application/vnd.apache.avro;version=1.9.0 }

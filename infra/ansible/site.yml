@@ -1,0 +1,4 @@
+# Configures the billing landing host that receives the mainframe nightly file (PRMNIGHT STEP040)
+# and the Airflow worker that runs the premium_billing_load DAG.
+- import_playbook: playbooks/landing-host.yml
+- import_playbook: playbooks/airflow-worker.yml

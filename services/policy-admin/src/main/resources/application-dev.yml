@@ -1,0 +1,8 @@
+policy:
+  premium-engine: java
+spring:
+  kafka:
+    bootstrap-servers: kafka.dev.corvane.internal:9092
+logging:
+  level:
+    com.corvane.policy: DEBUG

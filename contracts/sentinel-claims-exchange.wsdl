@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sentinel Claims Exchange v2 (third party). Copied from the vendor portal for reference; endpoint is external. -->
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:tns="urn:sentinel:claims:v2"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  name="ClaimsExchange" targetNamespace="urn:sentinel:claims:v2">
+  <wsdl:types>
+    <xsd:schema targetNamespace="urn:sentinel:claims:v2">
+      <xsd:include schemaLocation="sentinel-claims-exchange.xsd"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="SearchPriorClaimsRequest"><wsdl:part name="body" element="tns:SearchPriorClaims"/></wsdl:message>
+  <wsdl:message name="SearchPriorClaimsResponse"><wsdl:part name="body" element="tns:SearchResult"/></wsdl:message>
+  <wsdl:message name="UpdateClaimStatusRequest"><wsdl:part name="body" element="tns:UpdateClaimStatus"/></wsdl:message>
+  <wsdl:message name="UpdateClaimStatusResponse"><wsdl:part name="body" element="tns:Ack"/></wsdl:message>
+  <wsdl:portType name="ClaimsExchangePort">
+    <wsdl:operation name="SearchPriorClaims">
+      <wsdl:input message="tns:SearchPriorClaimsRequest"/>
+      <wsdl:output message="tns:SearchPriorClaimsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateClaimStatus">
+      <wsdl:input message="tns:UpdateClaimStatusRequest"/>
+      <wsdl:output message="tns:UpdateClaimStatusResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ClaimsExchangeBinding" type="tns:ClaimsExchangePort">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="SearchPriorClaims">
+      <soap:operation soapAction="urn:sentinel:claims:SearchPriorClaims"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="UpdateClaimStatus">
+      <soap:operation soapAction="urn:sentinel:claims:UpdateClaimStatus"/>
+      <wsdl:input><soap:body use="literal"/></wsdl:input>
+      <wsdl:output><soap:body use="literal"/></wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ClaimsExchangeService">
+    <wsdl:port name="ClaimsExchangePort" binding="tns:ClaimsExchangeBinding">
+      <soap:address location="https://soap.sentinel-exchange.example/ClaimsExchange"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

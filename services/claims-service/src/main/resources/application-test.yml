@@ -1,0 +1,6 @@
+claims:
+  triage:
+    auto-approve-limit: 2500
+  bureau:
+    sentinel:
+      endpoint: https://soap-uat.sentinel-exchange.example/ClaimsExchange

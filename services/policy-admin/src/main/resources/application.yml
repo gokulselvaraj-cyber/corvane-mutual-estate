@@ -1,0 +1,66 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: policy-admin
+  datasource:
+    url: jdbc:postgresql://${POLICY_DB_HOST:localhost}:5432/policydb
+    username: ${POLICY_DB_USER}
+    password: ${POLICY_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://login.corvane.internal
+
+policy:
+  # Migration seam (ADR-0009): java | mainframe. Overridden per environment.
+  premium-engine: java
+  ipt:
+    standard-rate: 0.12
+    higher-rate: 0.20
+    higher-rate-lines: [TRV, GDG]
+  excess:
+    compulsory: 250
+  renewals:
+    window-days: 30
+  topics:
+    bound: policies.bound.v1
+
+ledger:
+  url: jdbc:oracle:thin:@${LEDGER_DB_HOST}:1521/LEDGERPDB
+  username: ${LEDGER_DB_USER}
+  password: ${LEDGER_DB_PASSWORD}
+
+ctg:
+  server: CORVCTG1
+  host: ${CTG_HOST}
+  port: 2006
+  program: PRMCALC0
+  timeout-ms: 4000
+
+postcode:
+  base-url: https://postcode.lookup.example/v1
+  api-key: ${POSTCODE_API_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

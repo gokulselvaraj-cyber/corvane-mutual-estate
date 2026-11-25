@@ -1,0 +1,5 @@
+- name: Billing landing host
+  hosts: landing
+  become: true
+  roles:
+    - sftp_landing

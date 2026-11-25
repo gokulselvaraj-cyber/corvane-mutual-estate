@@ -1,0 +1,60 @@
+# Local development stack. Secrets come from your shell (.env is git-ignored).
+services:
+  postgres:
+    image: postgres:15.8
+    environment:
+      POSTGRES_DB: claimsdb
+      POSTGRES_USER: claims_app
+      POSTGRES_PASSWORD: ${CLAIMS_DB_PASSWORD}
+    volumes:
+      - ./data/postgres:/docker-entrypoint-initdb.d:ro
+    ports: ["5432:5432"]
+  kafka:
+    image: bitnami/kafka:3.7
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+    ports: ["9092:9092"]
+  policy-admin:
+    build: ./services/policy-admin
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      LEDGER_DB_PASSWORD: ${LEDGER_DB_PASSWORD}
+    ports: ["8080:8080"]
+  claims-service:
+    build: ./services/claims-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      POLICY_ADMIN_URL: http://policy-admin:8080
+      FRAUD_SCORING_URL: http://fraud-scoring:8080
+      DB_PASSWORD: ${CLAIMS_DB_PASSWORD}
+    depends_on: [postgres, kafka, policy-admin]
+    ports: ["8081:8080"]
+  fraud-scoring:
+    build: ./services/fraud-scoring
+    environment:
+      FRAUD_LLM_TRIAGE_ENABLED: "false"
+      AI_GATEWAY_TOKEN: ${AI_GATEWAY_TOKEN}
+    ports: ["8082:8080"]
+  payments-gateway:
+    build: ./services/payments-gateway
+    environment:
+      CLEARRIVER_BASE_URL: http://wiremock:8080/payouts/v2
+      CLEARRIVER_API_KEY: ${CLEARRIVER_API_KEY}
+    depends_on: [postgres, kafka]
+  notifications:
+    build: ./services/notifications
+    environment:
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+    depends_on: [kafka, mailhog]
+  customer-portal:
+    build: ./web/customer-portal
+    ports: ["3000:8080"]
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+  wiremock:
+    image: wiremock/wiremock:3.9.1

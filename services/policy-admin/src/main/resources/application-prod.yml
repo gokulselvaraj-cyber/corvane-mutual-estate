@@ -1,0 +1,16 @@
+# Production: the mainframe stays the rating engine of record until ADR-0009 step 3 signs off.
+policy:
+  premium-engine: mainframe
+spring:
+  kafka:
+    bootstrap-servers: kafka.prod.corvane.internal:9092
+ctg:
+  host: ctg.prod.corvane.internal
+  timeout-ms: 2500
+resilience4j:
+  circuitbreaker:
+    instances:
+      ctg:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s

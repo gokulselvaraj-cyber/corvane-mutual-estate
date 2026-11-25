@@ -1,0 +1,64 @@
+{
+  "type": "record",
+  "name": "PolicyBound",
+  "namespace": "com.corvane.events",
+  "doc": "policies.bound.v1 from policy-admin; read by broker-commissions and notifications. Contains personal data (holder name, email). brokerCode is null for direct business.",
+  "fields": [
+    {
+      "name": "policyNumber",
+      "type": "string"
+    },
+    {
+      "name": "lineCode",
+      "type": "string"
+    },
+    {
+      "name": "partyRef",
+      "type": "string"
+    },
+    {
+      "name": "holderName",
+      "type": "string"
+    },
+    {
+      "name": "holderEmail",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "brokerCode",
+      "type": [
+        "null",
+        "string"
+      ],
+      "default": null
+    },
+    {
+      "name": "annualPremium",
+      "type": "string"
+    },
+    {
+      "name": "iptAmount",
+      "type": "string"
+    },
+    {
+      "name": "currency",
+      "type": "string"
+    },
+    {
+      "name": "inceptionDate",
+      "type": "string"
+    },
+    {
+      "name": "premiumEngine",
+      "type": "string"
+    },
+    {
+      "name": "boundAt",
+      "type": "string"
+    }
+  ]
+}

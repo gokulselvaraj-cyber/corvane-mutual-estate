@@ -1,0 +1,11 @@
+2026-11-12T08:14:03.112Z INFO  consumer started group=payments-approved topic=claims.approved.v1 partitions=6
+2026-11-12T08:14:09.873Z INFO  payout requested claim=CLM-2026-0418811 amount=1840.00 currency=GBP key=pay-0418811-1
+2026-11-12T08:14:10.402Z INFO  payout accepted clearriver_ref=CRB-77A1F2 claim=CLM-2026-0418811
+2026-11-12T08:31:44.019Z WARN  clearriver timeout after 5000ms attempt=1 claim=CLM-2026-0418902
+2026-11-12T08:31:49.511Z WARN  clearriver timeout after 5000ms attempt=2 claim=CLM-2026-0418902
+2026-11-12T08:31:55.020Z WARN  clearriver timeout after 5000ms attempt=3 claim=CLM-2026-0418902
+2026-11-12T08:31:55.021Z ERROR payout failed claim=CLM-2026-0418902 reason=retries_exhausted
+2026-11-12T08:32:40.700Z ERROR circuit open name=clearriver failures=5 open_for=60s
+2026-11-12T08:33:41.002Z INFO  circuit half-open name=clearriver
+2026-11-12T08:33:41.650Z INFO  payout accepted clearriver_ref=CRB-77A20C claim=CLM-2026-0418902
+2026-11-12T08:33:41.700Z INFO  published payments.settled.v1 claim=CLM-2026-0418902

@@ -1,0 +1,38 @@
+@startuml corvane-context
+title Corvane Mutual - system context (2025-03)
+actor Customer
+actor Adjuster
+actor Broker
+rectangle "customer-portal (React)" as portal
+rectangle "adjuster-app (Android)" as mobile
+rectangle "policy-admin (Java)" as policy
+rectangle "claims-service (Java)" as claims
+rectangle "fraud-scoring (Python)" as fraud
+rectangle "payments-gateway (Go)" as payments
+rectangle "notifications (Node)" as notify
+rectangle "broker-commissions (.NET)" as comm
+rectangle "Mainframe CORVMF" as mf
+database "claimsdb (PostgreSQL)" as pg
+database "LEDGER (Oracle)" as ora
+cloud "ClearRiver Bank" as bank
+cloud "Sentinel Claims Exchange" as sentinel
+cloud "AI gateway" as ai
+Customer --> portal
+Adjuster --> mobile
+Broker --> comm
+portal --> policy : REST
+portal --> claims : REST
+mobile --> claims : REST
+claims --> policy : REST
+claims --> fraud : gRPC (ScoreClaim)
+claims --> sentinel : SOAP
+fraud --> ai : HTTPS
+claims --> pg
+policy --> ora
+policy --> mf : CTG (PRMCALC0)
+claims ..> payments : claims.approved.v1
+payments --> bank : HTTPS
+payments ..> claims : payments.settled.v1
+claims ..> notify : claims.registered.v1
+policy ..> comm : policies.bound.v1
+@enduml

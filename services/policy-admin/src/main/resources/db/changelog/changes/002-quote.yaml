@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-quote
+      author: policy-core
+      changes:
+        - createTable:
+            tableName: quote
+            columns:
+              - column: { name: id, type: VARCHAR(36), constraints: { primaryKey: true } }
+              - column: { name: line_code, type: CHAR(3), constraints: { nullable: false } }
+              - column: { name: holder_id, type: BIGINT, constraints: { foreignKeyName: fk_quote_holder, references: policy_holder(id) } }
+              - column: { name: base_premium, type: DECIMAL(11,2) }
+              - column: { name: total_premium, type: DECIMAL(11,2) }
+              - column: { name: ipt_amount, type: DECIMAL(9,2) }
+              - column: { name: excess_total, type: DECIMAL(9,2) }
+              - column: { name: referral_reason, type: VARCHAR(200) }
+              - column: { name: valid_until, type: TIMESTAMP }
+              - column: { name: bound_policy_id, type: BIGINT, constraints: { foreignKeyName: fk_quote_policy, references: policy(id) } }

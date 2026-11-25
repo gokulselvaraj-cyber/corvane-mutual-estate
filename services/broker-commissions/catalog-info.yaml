@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: broker-commissions
+  description: Calculates broker commission on bound policies and produces monthly statements.
+spec:
+  type: service
+  lifecycle: production
+  owner: team-distribution
+  system: corvane-distribution
+  dependsOn: [resource:kafka-policy, resource:sql-distribution]

@@ -1,0 +1,54 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: insurance
+  description: Corvane Mutual general insurance
+spec:
+  owner: platform-architecture
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: corvane-insurance-platform
+  description: Quotes, policies, claims, payouts and billing
+spec:
+  owner: platform-architecture
+  domain: insurance
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-fnol
+  description: First notice of loss squad (claims intake), formed 2026-04 from claims-platform
+spec:
+  type: team
+  parent: claims
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-payments
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: claimsdb
+  description: PostgreSQL claims database (europe-west2)
+spec:
+  type: database
+  owner: team-claims-platform
+  system: corvane-insurance-platform
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: corvane-claims-docs-dr
+  description: DR copy of claim documents (us-east1)
+spec:
+  type: storage-bucket
+  owner: team-platform-ops
+  system: corvane-insurance-platform

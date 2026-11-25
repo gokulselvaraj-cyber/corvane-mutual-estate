@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payments-gateway
+  description: Pays approved claims through ClearRiver Bank and reports settlement back to claims.
+  tags: [go, payments]
+spec:
+  type: service
+  lifecycle: production
+  owner: team-payments
+  system: corvane-claims
+  consumesApis: [clearriver-payouts-v2]
+  dependsOn: [resource:claimsdb, resource:kafka-claims]

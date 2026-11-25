@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broker-commissions
+  labels: {app: broker-commissions, team: distribution}
+spec:
+  replicas: 3
+  selector:
+    matchLabels: {app: broker-commissions}
+  template:
+    metadata:
+      labels: {app: broker-commissions, team: distribution}
+    spec:
+      serviceAccountName: broker-commissions
+      containers:
+      - name: broker-commissions
+        image: europe-west2-docker.pkg.dev/corvane-platform/apps/broker-commissions:${IMAGE_TAG}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom: {configMapKeyRef: {name: corvane-env, key: profile}}
+        - name: DB_PASSWORD
+          valueFrom: {secretKeyRef: {name: broker-commissions-db, key: password}}
+        resources:
+          requests: {cpu: "250m", memory: "512Mi"}
+          limits: {memory: "512Mi"}
+        readinessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /healthz, port: 8080}
+          initialDelaySeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: broker-commissions
+spec:
+  selector: {app: broker-commissions}
+  ports:
+  - port: 8080
+    targetPort: 8080

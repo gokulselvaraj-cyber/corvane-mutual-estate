@@ -1,0 +1,25 @@
+{
+  "name": "@corvane/notifications",
+  "version": "2.4.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "handlebars": "4.7.8",
+    "kafkajs": "2.2.4",
+    "nodemailer": "6.9.14",
+    "undici": "6.19.2"
+  },
+  "devDependencies": {
+    "@types/jest": "29.5.12",
+    "@types/node": "20.14.9",
+    "@types/nodemailer": "6.4.15",
+    "jest": "29.7.0",
+    "ts-jest": "29.1.5",
+    "typescript": "5.5.2"
+  }
+}

@@ -1,0 +1,8 @@
+Summarise this claim for an adjuster in at most 5 bullet points.
+Keep amounts and dates exact. Do not include the claimant's national insurance number or date of birth.
+
+Policy holder: {policyholder_name} ({policy_number}, {line_name})
+Claim {claim_id}, reported {reported_date}, status {status}
+Reserve: {reserve_amount} {currency}; paid to date: {paid_amount} {currency}
+Notes:
+{handler_notes}

@@ -1,0 +1,8 @@
+namespace: corvane-prod
+resources:
+- ../../base
+- env-config.yaml
+patches:
+- path: replicas.yaml
+- path: claims-service.yaml
+- path: notifications.yaml

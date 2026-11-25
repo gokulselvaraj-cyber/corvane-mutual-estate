@@ -1,0 +1,20 @@
+name: customer-portal
+on:
+  push:
+    branches: [main]
+    paths: ["web/customer-portal/**"]
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults: {run: {working-directory: web/customer-portal}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 20}
+      - run: npm install
+      - run: npm test
+      - run: npm run build
+      - name: Upload to CDN bucket
+        run: gsutil -m rsync -r dist gs://corvane-portal-static
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_DEPLOY_KEY_PATH }}

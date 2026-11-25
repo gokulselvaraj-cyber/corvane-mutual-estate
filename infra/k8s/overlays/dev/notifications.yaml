@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifications
+spec:
+  template:
+    spec:
+      containers:
+      - name: notifications
+        env:
+        - name: SMTP_HOST
+          value: smtp.corvane.internal
+        - name: SMTP_PORT
+          value: "587"
+        - name: ADMIN_URL
+          value: http://notifications:8081
+        - name: SMS_PROVIDER_URL
+          value: https://sms.textwave.example

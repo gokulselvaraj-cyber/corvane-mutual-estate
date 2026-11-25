@@ -1,0 +1,4 @@
+mainframe_sftp_user: corvmf
+landing_bucket: corvane-billing-landing-prod
+airflow_version: "2.9.3"
+timezone: Europe/London

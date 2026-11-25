@@ -1,0 +1,20 @@
+global:
+  imageTag: "2026.11.3"
+
+services:
+  policy-admin:
+    replicas: 3
+  claims-service:
+    replicas: 3
+  fraud-scoring:
+    replicas: 3
+  payments-gateway:
+    replicas: 1
+  notifications:
+    replicas: 3
+  broker-commissions:
+    replicas: 3
+  warehouse-loader:
+    replicas: 3
+  customer-portal:
+    replicas: 3

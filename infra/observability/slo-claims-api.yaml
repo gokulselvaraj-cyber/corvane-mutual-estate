@@ -1,0 +1,21 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: claims-api-availability
+  displayName: Claims API availability
+spec:
+  service: claims-service
+  description: FNOL and claim status calls succeed
+  budgetingMethod: Occurrences
+  objectives:
+  - displayName: 99.5% of requests succeed over 28 days
+    target: 0.995
+  timeWindow:
+  - duration: 28d
+    isRolling: true
+  indicator:
+    metadata: {name: claims-good-requests}
+    spec:
+      ratioMetric:
+        good: {metricSource: {type: Prometheus, spec: {query: 'sum(rate(http_server_requests_seconds_count{app="claims-service",status!~"5.."}[5m]))'}}}
+        total: {metricSource: {type: Prometheus, spec: {query: 'sum(rate(http_server_requests_seconds_count{app="claims-service"}[5m]))'}}}

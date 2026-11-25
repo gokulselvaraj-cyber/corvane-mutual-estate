@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-admin
+  labels: {app: policy-admin, team: policy-core}
+spec:
+  replicas: 3
+  selector:
+    matchLabels: {app: policy-admin}
+  template:
+    metadata:
+      labels: {app: policy-admin, team: policy-core}
+    spec:
+      serviceAccountName: policy-admin
+      containers:
+      - name: policy-admin
+        image: europe-west2-docker.pkg.dev/corvane-platform/apps/policy-admin:${IMAGE_TAG}
+        ports:
+        - containerPort: 8080
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          valueFrom: {configMapKeyRef: {name: corvane-env, key: profile}}
+        - name: DB_PASSWORD
+          valueFrom: {secretKeyRef: {name: policy-admin-db, key: password}}
+        resources:
+          requests: {cpu: "500m", memory: "1Gi"}
+          limits: {memory: "1Gi"}
+        readinessProbe:
+          httpGet: {path: /actuator/health/readiness, port: 8080}
+          periodSeconds: 10
+        livenessProbe:
+          httpGet: {path: /actuator/health/liveness, port: 8080}
+          initialDelaySeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: policy-admin
+spec:
+  selector: {app: policy-admin}
+  ports:
+  - port: 8080
+    targetPort: 8080

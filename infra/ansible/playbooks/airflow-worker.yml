@@ -1,0 +1,5 @@
+- name: Airflow workers
+  hosts: airflow_workers
+  become: true
+  roles:
+    - airflow_worker

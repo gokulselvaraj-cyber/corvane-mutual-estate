@@ -1,0 +1,19 @@
+# Default reviewers. Later rules win.
+*                                   @corvane/platform-architecture
+
+/services/policy-admin/             @corvane/policy-core
+/services/claims-service/           @corvane/claims-platform
+/services/fraud-scoring/            @corvane/fraud-analytics
+/services/notifications/            @corvane/digital
+/services/broker-commissions/       @corvane/distribution
+/services/warehouse-loader/         @corvane/data-platform
+/mobile/adjuster-app/               @corvane/digital
+/web/customer-portal/               @corvane/digital
+/mainframe/                         @corvane/mainframe-billing
+/data/postgres/                     @corvane/claims-platform
+/data/oracle/                       @corvane/policy-core
+/contracts/                         @corvane/platform-architecture
+/infra/                             @corvane/platform-ops
+/ops/                               @corvane/platform-ops
+/docs/                              @corvane/platform-architecture
+/vendor/                            @corvane/platform-architecture

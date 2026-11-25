@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: notifications
+  description: Emails and texts customers when claims are registered and policies are bound.
+spec:
+  type: service
+  lifecycle: production
+  owner: team-digital
+  system: corvane-claims
+  dependsOn: [resource:kafka-claims, resource:smtp-relay]

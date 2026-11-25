@@ -1,0 +1,10 @@
+resources:
+- policy-admin.yaml
+- claims-service.yaml
+- fraud-scoring.yaml
+- payments-gateway.yaml
+- notifications.yaml
+- broker-commissions.yaml
+- warehouse-loader.yaml
+- customer-portal.yaml
+- hpa.yaml

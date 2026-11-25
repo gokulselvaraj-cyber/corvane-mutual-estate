@@ -1,0 +1,24 @@
+{
+  "type": "record",
+  "name": "ClaimReopened",
+  "namespace": "com.corvane.events",
+  "doc": "claims.reopened.v1 (no producer yet)",
+  "fields": [
+    {
+      "name": "claimId",
+      "type": "string"
+    },
+    {
+      "name": "reason",
+      "type": "string"
+    },
+    {
+      "name": "reopenedBy",
+      "type": "string"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string"
+    }
+  ]
+}
